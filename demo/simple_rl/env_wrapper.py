@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from typing import Dict, Any
+import torchvision
 import math
 import gym
 
@@ -148,6 +149,87 @@ class ContinuousEnvWrapper(gym.Wrapper):
         timestep = timestep._replace(obs=obs_out)
         return timestep
 
+# class ContinuousRgbBenchmarkEnvWrapper(BenchmarkEnvWrapper):
+# 
+#     def get_obs(self, obs):
+#         obs_out = {
+#             'rgb': obs['rgb'] / 255.,
+#             'speed': (obs['speed'] / 25).astype(np.float32),
+#             'command': obs['command']
+#         }
+#         return obs_out
+# 
+#     def reset(self, *args, **kwargs) -> Any:
+#         obs = self.env.reset(*args, **kwargs)
+#         return self.get_obs(obs)
+# 
+#     def step(self, action):
+#         if isinstance(action, torch.Tensor):
+#             action = to_ndarray(action)
+#         action = np.squeeze(action)
+#         steer = action[0]
+#         acc = action[1]
+#         if acc > 0:
+#             throttle, brake = acc, 0
+#         else:
+#             throttle, brake = 0, -acc
+# 
+#         action = {
+#             'steer': steer,
+#             'throttle': throttle,
+#             'brake': brake,
+#         }
+#         timestep = self.env.step(action)
+#         obs = timestep.obs
+#         timestep = timestep._replace(obs=self.get_obs(obs))
+#         return timestep
+#     
+#     def render(self, *args, **kwargs):
+#         self.env.render(*args, **kwargs)
+
+class ContinuousRgbEnvWrapper(gym.Wrapper):
+
+    def get_obs(self, obs):
+        obs_out = {
+            'rgb': obs['rgb'] / 255.,
+            'speed': (obs['speed'] / 25).astype(np.float32),
+            'command': obs['command']
+        }
+        return obs_out
+
+    def reset(self, *args, **kwargs) -> Any:
+        obs = self.env.reset(*args, **kwargs)
+        return self.get_obs(obs)
+
+    def step(self, action):
+        if isinstance(action, torch.Tensor):
+            action = to_ndarray(action)
+        action = np.squeeze(action)
+        steer = action[0]
+        acc = action[1]
+        if acc > 0:
+            throttle, brake = acc, 0
+        else:
+            throttle, brake = 0, -acc
+
+        action = {
+            'steer': steer,
+            'throttle': throttle,
+            'brake': brake,
+        }
+        timestep = self.env.step(action)
+        obs = timestep.obs
+        timestep = timestep._replace(obs=self.get_obs(obs))
+        return timestep
+    
+    def render(self, *args, **kwargs):
+        self.env.render(*args, **kwargs)
+
+def ContinuousRgbBenchmarkEnvWrapper(env, cfg, *args, **kwargs):
+    return ContinuousRgbEnvWrapper(BenchmarkEnvWrapper(env, cfg), *args, **kwargs)
+
+def ContinuousRgbCarlaEnvWrapper(env, *args, **kwargs):
+    return ContinuousRgbEnvWrapper(CarlaEnvWrapper(env), *args, **kwargs)
 
 def DiscreteBenchmarkEnvWrapper(env, cfg, acc_list=None, steer_list=None):
     return DiscreteEnvWrapper(BenchmarkEnvWrapper(env, cfg), acc_list, steer_list)

@@ -142,6 +142,13 @@ _add('StraightTown02-v3', n_vehicles=0, weathers=WEATHER_4)
 _add('TurnTown02-v3', n_vehicles=0, weathers=WEATHER_4)
 
 # Random
+_add('NoCrashTown01_weather_empty-v1', weathers=WEATHER_1, n_vehicles=0)
+_add('NoCrashTown01_weather_regular-v1', weathers=WEATHER_1, n_vehicles=20, n_pedestrians=50)
+_add('NoCrashTown01_weather_dense-v1', weathers=WEATHER_1, n_vehicles=100, n_pedestrians=250)
+_add('NoCrashTown02_weather_empty-v1', weathers=WEATHER_2, n_vehicles=0)
+_add('NoCrashTown02_weather_regular-v1', weathers=WEATHER_2, n_vehicles=20, n_pedestrians=50)
+_add('NoCrashTown02_weather_dense-v1', weathers=WEATHER_2, n_vehicles=100, n_pedestrians=250)
+
 _add('NoCrashTown01_noweather_empty', weathers=[1], n_vehicles=0)
 _add('NoCrashTown01_noweather_regular', weathers=[1], n_vehicles=20, n_pedestrians=50)
 _add('NoCrashTown01_noweather_dense', weathers=[1], n_vehicles=100, n_pedestrians=250)

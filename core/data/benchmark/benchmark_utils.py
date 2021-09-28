@@ -40,6 +40,7 @@ def gather_results(result_dir) -> None:
     result_dir = Path(result_dir)
     for summary_path in result_dir.glob('*.csv'):
         name = summary_path.name
+        print(name)
         match = re.search('^(?P<suite_name>.*Town.*-v[0-9]+.*)_seed(?P<seed>[0-9]+)', name)
         suite_name = match.group('suite_name')
         seed = match.group('seed')

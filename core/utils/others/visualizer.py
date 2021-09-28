@@ -82,8 +82,8 @@ class Visualizer(object):
             self._canvas = resize_birdview(self._canvas, rate)
 
         def _write(text, i, j, canvas=self._canvas, fontsize=0.4):
-            rows = [x * (canvas.shape[0] // 15) for x in range(10 + 1)]
-            cols = [x * (canvas.shape[1] // 15) for x in range(9 + 1)]
+            rows = [x * (canvas.shape[0] // 15) for x in range(12+ 1)]
+            cols = [x * (canvas.shape[1] // 15) for x in range(12 + 1)]
             cv2.putText(canvas, text, (cols[j], rows[i]), cv2.FONT_HERSHEY_SIMPLEX, fontsize, WHITE, 1)
 
         if self._canvas.shape[0] > 600:
@@ -128,6 +128,10 @@ class Visualizer(object):
                 _write('Brake: {:.2f}'.format(data_dict['brake']), left_text_pos + 2, 0, fontsize=fontsize)
                 left_text_pos += 3
 
+            if 'done_info' in data_dict:
+                _write('done'+data_dict['done_info'], left_text_pos, 0, fontsize=fontsize)
+                left_text_pos += 1
+
             right_text_pos = 1
             if 'collided' in data_dict:
                 _write('Collided: %s' % data_dict['collided'], right_text_pos, 9, fontsize=fontsize)
@@ -163,6 +167,22 @@ class Visualizer(object):
             if data_dict.get('wrong_direction', False):
                 _write('Wrong direction!', right_text_pos, 9, fontsize=fontsize)
                 right_text_pos += 1
+            
+            # if data_dict.get('cur_yaw', False):
+            #     _write('/%.1f' % data_dict['cur_yaw'], right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos+=1
+            # if data_dict.get('node_yaw', False):
+            #     _write('/%.1f' % data_dict['node_yaw'], right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos+=1
+            
+            _write('goal: %.2f, distance: %.2f' % (data_dict['goal_reward'], data_dict['distance_reward']), right_text_pos, 9, fontsize=fontsize)
+            right_text_pos += 1
+            _write('speed: %.2f, angle: %.2f' % (data_dict['speed_reward'], data_dict['angle_reward']), right_text_pos, 9, fontsize=fontsize)
+            right_text_pos += 1
+            _write('steer: %.2f, lane: %.2f' % (data_dict['steer_reward'], data_dict['lane_reward']), right_text_pos, 9, fontsize=fontsize)
+            right_text_pos += 1
+            _write('failure: %.2f' % (data_dict['failure_reward']), right_text_pos, 9, fontsize=fontsize)
+            right_text_pos += 1
 
     def run_visualize(self) -> None:
         """

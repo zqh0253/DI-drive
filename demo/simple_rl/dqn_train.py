@@ -70,7 +70,7 @@ train_config = dict(
     ),
     server=[
         # Need to change to you own carla server
-        dict(carla_host='localhost', carla_ports=[9000, 9016, 2]),
+        dict(carla_host='localhost', carla_ports=[8000, 8016, 2]),
     ],
     policy=dict(
         cuda=True,

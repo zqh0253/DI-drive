@@ -38,11 +38,13 @@ autorun_config = dict(
         ),
         visualize=dict(
             type='birdview',
-            outputs=['show']
+            outputs=['video'],
+            show_text=True,
+            save_dir='/home/qhzhang/code/drive-from-video'
         ),
         wrapper=dict(),
     ),
-    server=[dict(carla_host='localhost', carla_ports=[9000, 9002, 2])],
+    server=[dict(carla_host='localhost', carla_ports=[8000, 8002, 2])],
     policy=dict(
         target_speed=40,
         eval=dict(

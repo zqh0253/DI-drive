@@ -45,7 +45,7 @@ class BasicPlanner(object):
     """
 
     config = dict(
-        min_distance=5.0,
+        min_distance=3.0,
         resolution=5.0,
         fps=10,
         debug=False,

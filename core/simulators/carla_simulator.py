@@ -1,5 +1,5 @@
 '''
-Copyright 2021 OpenDILab. All Rights Reserved:
+oopyright 2021 OpenDILab. All Rights Reserved:
 Description: Carla simulator.
 '''
 import os
@@ -621,6 +621,9 @@ class CarlaSimulator(BaseSimulator):
             wp_vec = wp.transform.rotation.get_forward_vector()
             waypoint_location_list.append([wp_loc.x, wp_loc.y, wp_vec.x, wp_vec.y])
 
+        node_yaw =-1
+        cur_yaw=-1
+
         if not self._off_road:
             current_waypoint = self._planner.current_waypoint
             node_waypoint = self._planner.node_waypoint
@@ -632,7 +635,7 @@ class CarlaSimulator(BaseSimulator):
                 node_yaw = node_waypoint.transform.rotation.yaw % 360
                 cur_yaw = current_waypoint.transform.rotation.yaw % 360
 
-                wp_angle = (node_yaw - cur_yaw) % 360
+                wp_angle = abs(node_yaw - cur_yaw) % 360
 
                 if 150 <= wp_angle <= (360 - 150):
                     self._wrong_direction = True
@@ -642,6 +645,8 @@ class CarlaSimulator(BaseSimulator):
 
         navigation = {
             'agent_state': agent_state.value,
+            'node_yaw': node_yaw,
+            'cur_yaw': cur_yaw,
             'command': command.value,
             'node': np.array([node_location.x, node_location.y]),
             'node_forward': np.array([node_forward.x, node_forward.y]),

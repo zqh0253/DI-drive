@@ -38,17 +38,17 @@ class SimpleCarlaEnv(BaseCarlaEnv):
     observation_space = spaces.Dict({})
     config = dict(
         simulator=dict(),
-        col_is_failure=False,
+        col_is_failure=True,
         stuck_is_failure=False,
-        ignore_light=False,
+        ignore_light=True,
         ran_light_is_failure=False,
         off_road_is_failure=False,
         wrong_direction_is_failure=False,
         off_route_is_failure=False,
-        off_route_distance=6,
+        off_route_distance=10,
         success_distance=5,
         success_reward=10,
-        stuck_len=300,
+        stuck_len=50,
         max_speed=5,
         visualize=None,
     )
@@ -65,7 +65,6 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         Initialize environment with config and Carla TCP host & port.
         """
         super().__init__(cfg, **kwargs)
-
         self._simulator_cfg = self._cfg.simulator
         self._carla_host = host
         self._carla_port = port
@@ -94,7 +93,7 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         self._off_road = False
         self._wrong_direction = False
         self._off_route = False
-        self._stuck_detector = StuckDetector(self._cfg.stuck_len)
+        self._stuck_detector = StuckDetector(self._cfg.stuck_len, 0.5)
 
         self._tick = 0
         self._timeout = float('inf')
@@ -103,6 +102,15 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         self._visualize_cfg = self._cfg.visualize
         self._simulator_databuffer = dict()
         self._visualizer = None
+        
+        self._done_info = ''
+        self.goal_reward = 0
+        self.distance_reward = 0
+        self.speed_reward = 0
+        self.angle_reward = 0
+        self.steer_reward = 0
+        self.lane_reward = 0
+        self.failure_reward = 0
 
     def _init_carla_simulator(self) -> None:
         if not self._use_local_carla:
@@ -173,7 +181,7 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         self._last_steer = 0
         self._last_distance = None
         self._timeout = self._simulator.end_timeout
-
+        self._done_info = ''
         return self.get_observations()
 
     def step(self, action: Dict) -> Tuple[Any, float, bool, Dict]:
@@ -249,6 +257,7 @@ class SimpleCarlaEnv(BaseCarlaEnv):
             bool: Whether success.
         """
         if self._simulator.end_distance < self._success_distance:
+            self._done_info = 'suc'
             return True
         return False
 
@@ -261,18 +270,32 @@ class SimpleCarlaEnv(BaseCarlaEnv):
             bool: Whether failure.
         """
         if self._stuck_is_failure and self._stuck:
+            print('done for stuck')
+            self._done_info = 'stuck'
             return True
         if self._col_is_failure and self._collided:
+            print('done for col')
+            self._done_info = 'col'
             return True
-        if self._ran_light_is_failure and self._ran_light:
+        if self._ran_light_is_failure and not self._ignore_light and self._ran_light:
+            print('done for ran light')
+            self._done_info = 'ran light'
             return True
         if self._off_road_is_failure and self._off_road:
+            print('done for off road')
+            self._done_info = 'off road'
             return True
         if self._wrong_direction_is_failure and self._wrong_direction:
+            print('done for wrong dir')
+            self._done_info = 'wrong idr'
             return True
         if self._off_route_is_failure and self._off_route:
+            print('done for off route')
+            self._done_info = 'off route'
             return True
         if self._tick > self._timeout:
+            print('done for timeout')
+            self._done_info = 'timeout'
             return True
 
         return False
@@ -358,7 +381,7 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         if self.is_success():
             goal_reward += self._success_reward
         elif self.is_failure():
-            goal_reward -= -1
+            goal_reward -= 1
 
         # distance reward
         location = self._simulator_databuffer['state']['location']
@@ -381,45 +404,53 @@ class SimpleCarlaEnv(BaseCarlaEnv):
             target_speed = 0
         elif agent_state == 4 and not self._ignore_light:
             target_speed = 0
-        if speed_limit > 10:
-            speed_reward = 1 - abs(speed - target_speed) / speed_limit
-        else:
-            speed_reward = 1
+        speed_reward = 1 - abs(speed - target_speed) / speed_limit
+        if speed < 1:
+            speed_reward -= 1
 
         forward_vector = self._simulator_databuffer['state']['forward_vector']
         target_forward = self._simulator_databuffer['navigation']['target_forward']
-        angle_reward = 0.5 * (1 - angle(forward_vector, target_forward) / np.pi)
+        angle_reward = 1 * (0.1 - angle(forward_vector, target_forward) / np.pi)
 
         steer = self._simulator_databuffer['action']['steer']
         command = self._simulator_databuffer['navigation']['command']
         steer_reward = 0.5
-        # if abs(steer - self._last_steer) > 0.5:
-        #     steer_reward -= 0.2
+        if abs(steer - self._last_steer) > 0.5:
+            steer_reward -= 0.2
         if command == 1 and steer > 0.1:
             steer_reward = 0
         elif command == 2 and steer < -0.1:
             steer_reward = 0
         elif (command == 3 or command == 4) and abs(steer) > 0.3:
             steer_reward = 0
+        steer_reward = 0
         self._last_steer = steer
 
         waypoint_list = self._simulator_databuffer['navigation']['waypoint_list']
         lane_mid_dis = lane_mid_distance(waypoint_list, location)
-        lane_reward = max(0, 1 - lane_mid_dis)
+        lane_reward = -0.5 * lane_mid_dis
+        lane_reward = 0
 
         failure_reward = 0
-        # if not self._col_is_failure and self._collided:
-        #     failure_reward -= 10
-        # elif not self._stuck_is_failure and self._stuck:
-        #     failure_reward -= 10
-        # elif not self._off_road_is_failure and self._off_road:
-        #     failure_reward -= 10
-        # elif not self._ran_light_is_failure and not self._ignore_light and self._ran_light:
-        #     failure_reward -= 10
-        # elif not self._wrong_direction_is_failure and self._wrong_direction:
-        #     failure_reward -= 10
+        if self._col_is_failure and self._collided:
+            failure_reward -= 5
+        elif self._stuck_is_failure and self._stuck:
+            failure_reward -= 5
+        elif self._off_road_is_failure and self._off_road:
+            failure_reward -= 5
+        elif self._ran_light_is_failure and not self._ignore_light and self._ran_light:
+            failure_reward -= 5
+        elif self._wrong_direction_is_failure and self._wrong_direction:
+            failure_reward -= 5
 
         reward_info = {}
+        self.goal_reward = goal_reward
+        self.distance_reward = distance_reward
+        self.speed_reward = speed_reward
+        self.angle_reward = angle_reward
+        self.steer_reward = steer_reward
+        self.lane_reward = lane_reward
+        self.failure_reward = failure_reward
         reward_info['goal_reward'] = goal_reward
         reward_info['distance_reward'] = distance_reward
         reward_info['speed_reward'] = speed_reward
@@ -430,7 +461,6 @@ class SimpleCarlaEnv(BaseCarlaEnv):
 
         total_reward = goal_reward + distance_reward + speed_reward + angle_reward + steer_reward + lane_reward \
             + failure_reward
-
         return total_reward, reward_info
 
     def render(self) -> None:
@@ -447,10 +477,18 @@ class SimpleCarlaEnv(BaseCarlaEnv):
             'wrong_direction': self._wrong_direction,
             'off_route': self._off_route,
             'reward': self._reward,
+            'goal_reward': self.goal_reward,
+            'distance_reward': self.distance_reward,
+            'speed_reward': self.speed_reward,
+            'angle_reward': self.angle_reward,
+            'steer_reward': self.steer_reward,
+            'lane_reward': self.lane_reward,
+            'failure_reward': self.failure_reward,
             'tick': self._tick,
             'end_timeout': self._simulator.end_timeout,
             'end_distance': self._simulator.end_distance,
             'total_distance': self._simulator.total_diatance,
+            'done_info': self._done_info
         }
         render_info.update(self._simulator_databuffer['state'])
         render_info.update(self._simulator_databuffer['navigation'])
