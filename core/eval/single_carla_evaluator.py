@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import wandb
 from typing import Any, Dict, List, Optional
 
 from .base_evaluator import BaseEvaluator
@@ -43,6 +44,7 @@ class SingleCarlaEvaluator(BaseEvaluator):
         super().__init__(cfg, env, policy, exp_name=exp_name, instance_name=instance_name)
         self._render = self._cfg.render
         self._transform_obs = self._cfg.transform_obs
+        wandb.init(project='carla')
 
     def close(self) -> None:
         """
@@ -98,6 +100,7 @@ class SingleCarlaEvaluator(BaseEvaluator):
             'eval_reward': eval_reward,
             'success': success,
         }
+        wandb.log(info)
         print(
             "[EVALUATOR] Evaluation ends:\n{}".format(
                 '\n'.join(['\t{}: {:.3f}'.format(k, v) for k, v in info.items()])

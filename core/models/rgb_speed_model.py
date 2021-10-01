@@ -29,9 +29,9 @@ class RGBSpeedConvEncoder(nn.Module):
 
         self._obs_shape = obs_shape
         self._embedding_size = embedding_size
-        print('now resnet34')
         self._model = models.resnet34(pretrained=True)
-        flatten_size = self._get_flatten_size()
+        self.perception = torch.nn.Sequential(*(list(self._model.children())[:-1]))
+        flatten_size = 512
         self._mid = nn.Linear(flatten_size, self._embedding_size // 2)
 
     def _get_flatten_size(self) -> int:
@@ -52,7 +52,7 @@ class RGBSpeedConvEncoder(nn.Module):
         """
         image = data['rgb'].permute(0, 3, 1, 2)
         speed = data['speed']
-        x = self._model(image)
+        x = self.perception(image).squeeze(-1).squeeze(-1)
         x = self._mid(x)
         speed_embedding_size = self._embedding_size - self._embedding_size // 2
         speed_vec = torch.unsqueeze(speed, 1).repeat(1, speed_embedding_size)

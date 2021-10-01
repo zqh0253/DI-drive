@@ -72,7 +72,7 @@ train_config = dict(
         wrapper=dict(
             # Collect and eval suites for training
             collect=dict(suite='NoCrashTown01-v1', ),
-            eval=dict(suite='NoCrashTown02-v2', ),
+            eval=dict(suite='NoCrashTown01-v1', ),
         ),
     ),
     server=[
@@ -114,7 +114,7 @@ train_config = dict(
         ),
         eval=dict(
             evaluator=dict(
-                suite='NoCrashTown02-v2',
+                suite='NoCrashTown01-v1',
                 episodes_per_suite=50,
                 eval_freq=5000,
                 n_episode=3,
