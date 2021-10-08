@@ -610,6 +610,7 @@ class PPORLModel(nn.Module):
         else:
             self.actor = nn.ModuleList([self.actor_encoder, self.actor_head])
             self.critic = nn.ModuleList([self.critic_encoder, self.critic_head])
+        self.feat_bn = nn.BatchNorm1d(512)
 
     def forward(self, inputs, mode=None, **kwargs):
         assert (mode in ['compute_actor_critic', 'compute_actor', 'compute_critic'])
@@ -622,6 +623,8 @@ class PPORLModel(nn.Module):
         else:
             actor_embedding = self.actor_encoder(inputs)
             critic_embedding = self.critic_encoder(inputs)
+        actor_embedding = self.feat_bn(actor_embedding)
+        critic_embedding = self.feat_bn(critic_embedding)
         value = self.critic_head(critic_embedding)
         actor_output = self.actor_head(actor_embedding)
         if self.continuous:
@@ -635,6 +638,7 @@ class PPORLModel(nn.Module):
             x = self.encoder(inputs)
         else:
             x = self.actor_encoder(inputs)
+        x = self.feat_bn(x)
         x = self.actor_head(x)
         if self.continuous:
             x = {'logit': [x['mu'], x['sigma']]}
@@ -645,5 +649,6 @@ class PPORLModel(nn.Module):
             x = self.encoder(inputs)
         else:
             x = self.critic_encoder(inputs)
+        x = self.feat_bn(x)
         x = self.critic_head(x)
         return {'value': x['pred']}

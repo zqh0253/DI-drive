@@ -4,6 +4,7 @@ from typing import Dict, Optional, Tuple, List, Union
 
 from ding.torch_utils import MLP
 import torchvision.models as models
+from collections import OrderedDict
 
 class RGBSpeedConvEncoder(nn.Module):
     """
@@ -30,7 +31,22 @@ class RGBSpeedConvEncoder(nn.Module):
         self._obs_shape = obs_shape
         self._embedding_size = embedding_size
         self._model = models.resnet34(pretrained=True)
+        d = torch.load('/home/yhxu/qhzhang/workspace/only_steering.pt')
+        # carla_pretrain = torch.load('/home/yhxu/qhzhang/workspace/iteration_10000.pth.tar')
+
+        newd = OrderedDict()
+        for k,v in d.items():
+            if 'module._perc' in k:
+                newd[k[19:]] = v
+        # newdd = OrderedDict()
+        # for k, v in carla_pretrain['model'].items():
+        #     if 'perception' in k and 'critic' not in k and 'actor' not in k:
+        #         newdd[k[26:]] = v
+        self._model.load_state_dict(newd)
         self.perception = torch.nn.Sequential(*(list(self._model.children())[:-1]))
+        # self.perception.load_state_dict(newdd)
+        # for p in self.perception.parameters():
+        #     p.requires_grad=False
         flatten_size = 512
         self._mid = nn.Linear(flatten_size, self._embedding_size // 2)
 

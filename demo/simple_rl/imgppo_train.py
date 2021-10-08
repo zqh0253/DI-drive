@@ -21,7 +21,7 @@ from core.utils.others.ding_utils import compile_config
 train_config = dict(
     exp_name='ppo21_bev32_lr1e4_bs128_ns3000_update5_train_ft',
     env=dict(
-        collector_env_num=6,
+        collector_env_num=7,
         evaluator_env_num=1,
         simulator=dict(
             town='Town01',
@@ -38,8 +38,8 @@ train_config = dict(
                     name='rgb',
                     type='rgb',
                     size=[320, 180],
-                    position=[-5.5, 0, 2.8],
-                    rotation=[-15, 0, 0],
+                    position=[2.0, 0, 1.4],
+                    rotation=[0, 0, 0],
                 ),
             ),
         ),
@@ -54,20 +54,24 @@ train_config = dict(
                 auto_reset=True,
                 shared_memory=False,
                 context='spawn',
-                max_retry=1,
+                max_retry=3,
+		reset_timeout=1000,
+		step_timeout=1000,
             ),
             eval=dict(
                 shared_memory=False,
                 auto_reset=False,
                 context='spawn',
-                mex_retry=1
+                max_retry=3,
+		reset_timeout=1000,
+		step_timeout=1000,
                 )
         ),
         visualize = dict(
             type='rgb',
             outputs=['video'],
             show_text=True,
-            save_dir='/home/qhzhang/code/drive-from-video/video'
+            save_dir='/home/yhxu/qhzhang/video'
         ),
         wrapper=dict(
             # Collect and eval suites for training
@@ -76,7 +80,7 @@ train_config = dict(
         ),
     ),
     server=[
-        dict(carla_host='localhost', carla_ports=[8000, 8016, 2]),
+        dict(carla_host='localhost', carla_ports=[9000, 9016, 2]),
     ],
     policy=dict(
         cuda=True,
@@ -159,15 +163,15 @@ def main(cfg, seed=0):
     #     cfg=cfg.env.manager.eval,
     # )
     vis_eval_single_env = wrapped_env(cfg.env, cfg.env.wrapper.eval, *tcp_list[collector_env_num])
-    eval_single_env = SyncSubprocessEnvManager(
-            env_fn=[partial(single_wrapped_env_for_benchmark, cfg.env,  *tcp_list[collector_env_num+1])],
-            cfg=cfg.env.manager.eval
-        )
+    # eval_single_env = SyncSubprocessEnvManager(
+    #         env_fn=[partial(single_wrapped_env_for_benchmark, cfg.env,  *tcp_list[collector_env_num+1])],
+    #         cfg=cfg.env.manager.eval
+    #     )
 
 
     collector_env.seed(seed)
     # evaluate_env.seed(seed)
-    eval_single_env.seed(seed)
+    # eval_single_env.seed(seed)
     vis_eval_single_env.seed(seed)
     set_pkg_seed(seed)
 
@@ -178,7 +182,7 @@ def main(cfg, seed=0):
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
     collector = SampleCollector(cfg.policy.collect.collector, collector_env, policy.collect_mode, tb_logger, exp_name=cfg.exp_name)
     vis_evaluator = SingleCarlaEvaluator(cfg.policy.eval.evaluator, vis_eval_single_env, policy.eval_mode) #, tb_logger, exp_name=cfg.exp_name)
-    evaluator = CarlaBenchmarkEvaluator(cfg.policy.eval.evaluator, eval_single_env, policy.eval_mode)
+    # evaluator = CarlaBenchmarkEvaluator(cfg.policy.eval.evaluator, eval_single_env, policy.eval_mode)
 
     learner.call_hook('before_run')
     
@@ -190,8 +194,8 @@ def main(cfg, seed=0):
         #     if stop:
         #         break
         vis_evaluator.eval()
-        if cnt % 10 == 0:
-            evaluator.eval()
+        #if cnt % 10 == 0:
+        #    evaluator.eval()
         # Sampling data from environments
         new_data = collector.collect(train_iter=learner.train_iter, n_sample=cfg.policy.collect.my_n_sample)
         print('-collect finish!!!')

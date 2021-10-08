@@ -121,7 +121,8 @@ class SimpleCarlaEnv(BaseCarlaEnv):
                 client=None,
                 host=self._carla_host,
                 port=self._carla_port,
-                tm_port=self._carla_tm_port
+                tm_port=self._carla_tm_port,
+		timeout=1000,
             )
         else:
             print('------ Using Remote carla @ {}:{} ------'.format(self._carla_host, self._carla_port))
@@ -130,7 +131,8 @@ class SimpleCarlaEnv(BaseCarlaEnv):
                 client=None,
                 host=self._carla_host,
                 port=self._carla_port,
-                tm_port=self._carla_tm_port
+                tm_port=self._carla_tm_port, 
+		timeout=1000,
             )
         self._launched_simulator = True
 
