@@ -26,7 +26,7 @@ class CILPolicy(BaseCarlaPolicy):
 
     def _process_sensors(self, sensor):
         sensor = sensor[:, :, ::-1]  # BGR->RGB
-        sensor = sensor[self._cfg.IMAGE_CUT[0]:self._cfg.IMAGE_CUT[1], :, :]  # crop
+        # sensor = sensor[self._cfg.IMAGE_CUT[0]:self._cfg.IMAGE_CUT[1], :, :]  # crop
         sensor = scipy.misc.imresize(sensor, (self._cfg.SENSORS['rgb'][1], self._cfg.SENSORS['rgb'][2]))
 
         sensor = np.swapaxes(sensor, 0, 1)
@@ -49,7 +49,7 @@ class CILPolicy(BaseCarlaPolicy):
 
             action = {'steer': float(steer), 'throttle': float(throttle), 'brake': float(brake)}
 
-        actions.append({'action': action})
+            actions.append({'action': action})
 
         return actions
 
@@ -58,12 +58,18 @@ class CILPolicy(BaseCarlaPolicy):
 
     def _forward_eval(self, data: Dict) -> dict:
         data_id = list(data.keys())
-
         for id in data.keys():
-            data[id]['rgb'] = self._process_sensors(data[id]['rgb'].numpy())
+            try:
+                del(data[id]['waypoint_list'])
+                del(data[id]['direction_list'])
+            except:
+                pass
+            try:
+                data[id]['rgb'] = self._process_sensors(data[id]['rgb'].numpy())
+            except:
+                data[id]['rgb'] = self._process_sensors(data[id]['rgb'])
 
         data = default_collate(list(data.values()))
-
         with torch.no_grad():
             output = self._eval_model.run_step(data)
         if self._cuda:

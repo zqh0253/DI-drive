@@ -4,6 +4,8 @@ import os
 import cv2
 import numpy as np
 import torch
+import traceback
+
 from torch.utils.data import Dataset
 
 from core.utils.data_utils import splitter
@@ -82,12 +84,12 @@ class CoILDataset(Dataset):
         Returns:
 
         """
-        try:
+        try:    
             img_path = os.path.join(
                 self.root_dir, self.sensor_data_names[index].split('/')[-2],
                 self.sensor_data_names[index].split('/')[-1]
             )
-
+            
             img = cv2.imread(img_path, cv2.IMREAD_COLOR)
             # Apply the image transformation
             if self.transform is not None:
@@ -111,6 +113,8 @@ class CoILDataset(Dataset):
 
             self.batch_read_number += 1
         except AttributeError:
+            print(img_path)
+            traceback.print_exc()
             print("Blank IMAGE")
 
             measurements = self.measurements[0].copy()

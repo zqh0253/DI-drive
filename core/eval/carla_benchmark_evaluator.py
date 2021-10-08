@@ -184,6 +184,7 @@ class CarlaBenchmarkEvaluator(BaseEvaluator):
                     timesteps = self._env_manager.step(actions)
                     for i, t in timesteps.items():
                         if t.info.get('abnormal', False):
+                            print(f'env {i} abnormal')
                             self._policy.reset([i])
                             self._env_manager.reset(reset_params={i: running_env_params[i]})
                             continue
@@ -198,6 +199,7 @@ class CarlaBenchmarkEvaluator(BaseEvaluator):
                                 'collided': t.info['collided'],
                                 'timecost': int(t.info['tick']),
                             }
+                            print(result)
                             results.append(result)
                             if episode_queue:
                                 reset_param = episode_queue.pop()

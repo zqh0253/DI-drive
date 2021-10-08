@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from core.utils.model_utils.common import FC, Conv, Branching, Join
 from core.utils.others.general_helper import command_number_to_index
+from torchvision.models import resnet34
 
 
 class CoILICRA(nn.Module):
@@ -64,6 +65,7 @@ class CoILICRA(nn.Module):
 
             raise ValueError("invalid convolution layer type")
 
+        number_output_neurons = 512
         self.measurements = FC(
             params={
                 'neurons': [len(cfg.INPUTS)] + params['measurements']['fc']['neurons'],
@@ -110,6 +112,9 @@ class CoILICRA(nn.Module):
 
         self.branches = Branching(branch_fc_vector)  # Here we set branching automatically
 
+        resnet34_model = resnet34(pretrained=True)
+        self.resnet_pretrain = torch.nn.Sequential(*(list(resnet34_model.children())[:-1]))
+
         if 'conv' in params['perception']:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -123,13 +128,17 @@ class CoILICRA(nn.Module):
 
     def forward(self, x, a):
         """ ###### APPLY THE PERCEPTION MODULE """
-        x, inter = self.perception(x)
+        # x, inter = self.perception(x)
+        x = self.resnet_pretrain(x).squeeze(-1).squeeze(-1)
         # Not a variable, just to store intermediate layers for future vizualization
         # self.intermediate_layers = inter
         """ ###### APPLY THE MEASUREMENT MODULE """
         m = self.measurements(a)
         """ Join measurements and perception"""
-        j = self.join(x, m)
+        try:
+            j = self.join(x, m)
+        except:
+            print(x.shape, m.shape)
 
         branch_outputs = self.branches(j)
 
@@ -195,8 +204,8 @@ class COILModel():
         directions = observations['command'] + 1.0
         # Take the forward speed and normalize it for it to go from 0-1
         norm_speed = observations['speed'] / 25.
-        norm_speed = torch.cuda.FloatTensor([norm_speed]).unsqueeze(0)
-        directions_tensor = torch.cuda.LongTensor([directions])
+        norm_speed = torch.cuda.FloatTensor(norm_speed.cuda()).unsqueeze(1)
+        directions_tensor = torch.cuda.LongTensor(directions.cuda().long())
         # Compute the forward pass processing the sensors got from CARLA.
         model_outputs = self._model.forward_branch(sensor_data, norm_speed, directions_tensor)
 
