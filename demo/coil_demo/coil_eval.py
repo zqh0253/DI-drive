@@ -17,16 +17,16 @@ from core.utils.others.tcp_helper import parse_carla_tcp
 
 autoeval_config = dict(
     env=dict(
-        env_num=5,
+        env_num=8,
         simulator=dict(
             verbose=False,
             obs=(
                 dict(
                     name='rgb',
                     type='rgb',
-                    size=[800, 600],
+                    size=[320, 180],
                     position=[2.0, 0.0, 1.4],
-                    rotation=[-15, 0, 0],
+                    rotation=[0, 0, 0],
                 ),
             ),
             planner=dict(type='behavior', ),
@@ -39,14 +39,14 @@ autoeval_config = dict(
         ),
     ),
     server=[
-        dict(carla_host='localhost', carla_ports=[9000, 9010, 2])
+        dict(carla_host='localhost', carla_ports=[9000, 9016, 2])
     ],
     policy=dict(
         target_speed=40,
         eval=dict(
             evaluator=dict(
                 suite='FullTown02-v1',
-                episodes_per_suite=5,
+                episodes_per_suite=8,
                 save_files=True,
             ),
         ),
@@ -57,7 +57,7 @@ policy_config = dict(
     model=dict(
         ckpt_path='_logs/sample/coil_icra/checkpoints/100.pth'
     ),
-    SENSORS=dict(rgb=[3, 88, 200]),
+    SENSORS=dict(rgb=[3, 180, 320]),
     TARGETS=['steer', 'throttle', 'brake'],
     INPUTS=['speed_module'],
     SPEED_FACTOR=25.0,
@@ -71,7 +71,7 @@ policy_config = dict(
     ),
     PRE_TRAINED=False,
     LEARNING_RATE_DECAY_LEVEL=0.1,
-    IMAGE_CUT=[115, 500],
+    # IMAGE_CUT=[115, 500],
     NUMBER_FRAMES_FUSION=1,
 )
 main_config = EasyDict(autoeval_config)

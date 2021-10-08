@@ -29,9 +29,9 @@ config = dict(
                 dict(
                     name='rgb',
                     type='rgb',
-                    size=[800, 600],
+                    size=[320, 180],
                     position=[2.0, 0.0, 1.4],
-                    rotation=[-15, 0, 0],
+                    rotation=[0, 0, 0],
                 ),
             ),
 
@@ -47,7 +47,7 @@ config = dict(
         wrapper=dict(),
     ),
     server=[
-        dict(carla_host='localhost', carla_ports=[9000, 9010, 2]),
+        dict(carla_host='localhost', carla_ports=[9000, 9016, 8]),
     ],
     policy=dict(
         target_speed=25,
@@ -67,9 +67,9 @@ main_config = EasyDict(config)
 
 def cils_postprocess(sensor_data, *args):
     rgb = sensor_data['rgb'].copy()
-    rgb = rgb[115:500, :, :]
+    # rgb = rgb[115:500, :, :]
     im = PIL.Image.fromarray(rgb)
-    rgb = np.array(im.resize([200, 88], PIL.Image.BICUBIC))
+    rgb = np.array(im.resize([320, 180], PIL.Image.BICUBIC))
     sensor_data = {'rgb': rgb}
     others = {}
     return sensor_data, others

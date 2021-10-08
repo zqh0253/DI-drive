@@ -20,11 +20,11 @@ train_config = dict(
     INPUTS=['speed_module'],
     BATCH_SIZE=120,
     COMMON=dict(
-        folder='sample', exp='coil_icra', dataset_path='./datasets_train'
+        folder='sample', exp='coil_icra', dataset_path='/home/qhzhang/data/cil'
     ),
-    GPU='0',
+    GPU='0,1,2,3,4,5,6,7',
     SAVE_SCHEDULE=[0, 100, 1000001],
-    NUMBER_ITERATIONS=200000,
+    NUMBER_ITERATIONS=30000,
     SPEED_FACTOR=25.0,
     TRAIN_DATASET_NAME='cils_datasets_train',
     AUGMENTATION=None,
