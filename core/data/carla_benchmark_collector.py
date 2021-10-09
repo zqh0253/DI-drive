@@ -216,6 +216,7 @@ class CarlaBenchmarkCollector(BaseCollector):
                     self._traj_cache[env_id].append(transition)
                     if timestep.done:
                         if timestep.info['success'] and len(self._traj_cache[env_id]) > 50:
+                            print('[COLLECTOR] env_id {} success'.format(env_id), timestep.info)
                             env_param = running_env_params[env_id]
                             episode_data = {'env_param': env_param, 'data': list(self._traj_cache[env_id])}
                             return_data.append(episode_data)

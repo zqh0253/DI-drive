@@ -17,7 +17,7 @@ from core.utils.others.tcp_helper import parse_carla_tcp
 
 config = dict(
     env=dict(
-        env_num=5,
+        env_num=8,
         simulator=dict(
             disable_two_wheels=True,
             waypoint_num=32,
@@ -47,7 +47,7 @@ config = dict(
         wrapper=dict(),
     ),
     server=[
-        dict(carla_host='localhost', carla_ports=[9000, 9016, 8]),
+        dict(carla_host='localhost', carla_ports=[9000, 9016, 2]),
     ],
     policy=dict(
         target_speed=25,

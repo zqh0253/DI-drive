@@ -71,7 +71,7 @@ train_config = dict(
             type='rgb',
             outputs=['video'],
             show_text=True,
-            save_dir='/home/yhxu/qhzhang/video'
+            save_dir='/home/qhzhang/video'
         ),
         wrapper=dict(
             # Collect and eval suites for training

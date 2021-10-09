@@ -6,7 +6,7 @@ Description:
 from functools import partial
 
 from easydict import EasyDict
-from ding.envs import SyncSubprocessEnvManager
+from ding.envs import SyncSubprocessEnvManager, BaseEnvManager
 from ding.utils import set_pkg_seed
 from ding.utils.default_helper import deep_merge_dicts
 
@@ -18,6 +18,7 @@ from core.utils.others.tcp_helper import parse_carla_tcp
 autoeval_config = dict(
     env=dict(
         env_num=8,
+        col_is_failure=True,
         simulator=dict(
             verbose=False,
             obs=(
@@ -36,6 +37,10 @@ autoeval_config = dict(
             auto_reset=False,
             context='spawn',
             max_retry=1,
+        ),
+        visualize=dict(
+            type='rgb',
+            outputs=['video']
         ),
     ),
     server=[
@@ -95,6 +100,7 @@ def main(cfg, seed=0):
         env_fn=[partial(wrapped_env, cfg.env, *tcp_list[i]) for i in range(env_num)],
         cfg=cfg.env.manager,
     )
+    evaluate_env.enable_save_replay('./replay')
     evaluate_env.seed(seed)
     set_pkg_seed(seed)
     policy = CILPolicy(cfg.policy)

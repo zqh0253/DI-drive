@@ -25,10 +25,10 @@ DEFAULT_STEER_LIST = [
 ]
 
 
-class DiscreteEnvWrapper(gym.Wrapper):
+class DiscreteBenchmarkEnvWrapper(BenchmarkEnvWrapper):
 
-    def __init__(self, env, acc_list=None, steer_list=None):
-        super().__init__(env)
+    def __init__(self, env, cfg, acc_list=None, steer_list=None):
+        super().__init__(env, cfg)
         if acc_list is not None:
             self._acc_list = acc_list
         else:
@@ -39,7 +39,7 @@ class DiscreteEnvWrapper(gym.Wrapper):
             self._steer_list = DEFAULT_STEER_LIST
 
     def reset(self, *args, **kwargs) -> Any:
-        obs = self.env.reset(*args, **kwargs)
+        obs = super().reset(*args, **kwargs)
         obs_out = {
             'birdview': obs['birdview'][..., [0, 1, 5, 6, 8]],
             'speed': (obs['speed'] / 25).astype(np.float32),
@@ -59,7 +59,7 @@ class DiscreteEnvWrapper(gym.Wrapper):
             'throttle': acc[0],
             'brake': acc[1],
         }
-        timestep = self.env.step(action)
+        timestep = super().step(action)
         obs = timestep.obs
         obs_out = {
             'birdview': obs['birdview'][..., [0, 1, 5, 6, 8]],
@@ -69,10 +69,10 @@ class DiscreteEnvWrapper(gym.Wrapper):
         return timestep
 
 
-class MultiDiscreteEnvWrapper(gym.Wrapper):
+class MultiDiscreteBenchmarkEnvWrapper(BenchmarkEnvWrapper):
 
-    def __init__(self, env, acc_list=None, steer_list=None):
-        super().__init__(env)
+    def __init__(self, env, cfg, acc_list=None, steer_list=None):
+        super().__init__(env, cfg)
         if acc_list is not None:
             self._acc_list = acc_list
         else:
@@ -83,7 +83,7 @@ class MultiDiscreteEnvWrapper(gym.Wrapper):
             self._steer_list = DEFAULT_STEER_LIST
 
     def reset(self, *args, **kwargs) -> Any:
-        obs = self.env.reset(*args, **kwargs)
+        obs = super().reset(*args, **kwargs)
         obs_out = {
             'birdview': obs['birdview'][..., [0, 1, 5, 6, 8]],
             'speed': (obs['speed'] / 25).astype(np.float32),
@@ -104,7 +104,7 @@ class MultiDiscreteEnvWrapper(gym.Wrapper):
             'throttle': acc[0],
             'brake': acc[1],
         }
-        timestep = self.env.step(action)
+        timestep = super().step(action)
         obs = timestep.obs
         obs_out = {
             'birdview': obs['birdview'][..., [0, 1, 5, 6, 8]],
@@ -114,10 +114,10 @@ class MultiDiscreteEnvWrapper(gym.Wrapper):
         return timestep
 
 
-class ContinuousEnvWrapper(gym.Wrapper):
+class ContinuousBenchmarkEnvWrapper(BenchmarkEnvWrapper):
 
     def reset(self, *args, **kwargs) -> Any:
-        obs = self.env.reset(*args, **kwargs)
+        obs = super().reset(*args, **kwargs)
         obs_out = {
             'birdview': obs['birdview'][..., [0, 1, 5, 6, 8]],
             'speed': (obs['speed'] / 25).astype(np.float32),
@@ -140,7 +140,7 @@ class ContinuousEnvWrapper(gym.Wrapper):
             'throttle': throttle,
             'brake': brake,
         }
-        timestep = self.env.step(action)
+        timestep = super().step(action)
         obs = timestep.obs
         obs_out = {
             'birdview': obs['birdview'][..., [0, 1, 5, 6, 8]],

@@ -15,7 +15,7 @@ from core.utils.others.general_helper import create_log_folder, create_exp_path,
 
 train_config = dict(
     NUMBER_OF_LOADING_WORKERS=12,
-    SENSORS=dict(rgb=[3, 88, 200]),
+    SENSORS=dict(rgb=[3, 180, 320]),
     TARGETS=['steer', 'throttle', 'brake'],
     INPUTS=['speed_module'],
     BATCH_SIZE=120,
