@@ -88,6 +88,7 @@ train_config = dict(
         on_policy=True,
         model=dict(
             action_shape=2,
+            task_pretrained=True,
         ),
         learn=dict(
             multi_gpu=False,

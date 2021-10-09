@@ -308,6 +308,7 @@ class CPPORGBRLModel(nn.Module):
     def __init__(
             self,
             obs_shape: Tuple = [3, 320, 180],
+            task_pretrained: bool=False,
             action_shape: Union[int, Tuple] = 2,
             share_encoder: bool = True,
             continuous: bool = True,
@@ -329,14 +330,14 @@ class CPPORGBRLModel(nn.Module):
         self.share_encoder = share_encoder
         if self.share_encoder:
             self.encoder = RGBSpeedConvEncoder(
-                self._obs_shape, encoder_embedding_size
+                self._obs_shape, encoder_embedding_size, task_pretrained
             )
         else:
             self.actor_encoder = RGBSpeedConvEncoder(
-                self._obs_shape, encoder_embedding_size
+                self._obs_shape, encoder_embedding_size, task_pretrained
             )
             self.critic_encoder = RGBSpeedConvEncoder(
-                self._obs_shape, encoder_embedding_size
+                self._obs_shape, encoder_embedding_size, task_pretrained
             )
         self.critic_head = ChoiceHead(RegressionHead, self.command_n, 
             critic_head_hidden_size, 1, critic_head_layer_num, activation=activation, norm_type=norm_type)
