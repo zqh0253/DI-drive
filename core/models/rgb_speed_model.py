@@ -25,7 +25,8 @@ class RGBSpeedConvEncoder(nn.Module):
             self,
             obs_shape: Tuple,
             embedding_size: int,
-            task_pretrianed: bool
+            task_pretrianed: bool,
+            fix_perception: bool
     ) -> None:
         super().__init__()
 
@@ -47,8 +48,9 @@ class RGBSpeedConvEncoder(nn.Module):
             self._model.load_state_dict(newd)
         self.perception = torch.nn.Sequential(*(list(self._model.children())[:-1]))
         # self.perception.load_state_dict(newdd)
-        # for p in self.perception.parameters():
-        #     p.requires_grad=False
+        if fix_perception:
+            for p in self.perception.parameters():
+                p.requires_grad=False
         flatten_size = 512
         self._mid = nn.Linear(flatten_size, self._embedding_size // 2)
 

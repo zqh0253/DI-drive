@@ -35,6 +35,7 @@ class SingleCarlaEvaluator(BaseEvaluator):
 
     def __init__(
             self,
+            notes,
             cfg: Dict,
             env: Any,
             policy: Any,
@@ -45,7 +46,7 @@ class SingleCarlaEvaluator(BaseEvaluator):
         super().__init__(cfg, env, policy, tb_logger=tb_logger, exp_name=exp_name, instance_name=instance_name)
         self._render = self._cfg.render
         self._transform_obs = self._cfg.transform_obs
-        wandb.init(project='carla')
+        wandb.init(project='carla', name=notes)
 
     def close(self) -> None:
         """

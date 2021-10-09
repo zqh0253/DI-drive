@@ -4,6 +4,7 @@ from functools import partial
 from easydict import EasyDict
 import copy
 import time
+import argparse
 from tensorboardX import SummaryWriter
 
 from core.envs import SimpleCarlaEnv, CarlaEnvWrapper
@@ -71,7 +72,7 @@ train_config = dict(
             type='rgb',
             outputs=['video'],
             show_text=True,
-            save_dir='/home/qhzhang/video'
+            save_dir='/home/yhxu/qhzhang/video'
         ),
         wrapper=dict(
             # Collect and eval suites for training
@@ -88,11 +89,13 @@ train_config = dict(
         on_policy=True,
         model=dict(
             action_shape=2,
-            task_pretrained=True,
+            task_pretrained=False,
+            fix_perception=False,
+            normalization=None,
         ),
         learn=dict(
             multi_gpu=False,
-            epoch_per_collect=12,
+            epoch_per_collect=6,
             batch_size=256,
             learning_rate=0.0001,
             weight_decay=0.0001,
@@ -182,7 +185,9 @@ def main(cfg, seed=0):
     tb_logger = SummaryWriter('./log/{}/'.format(cfg.exp_name))
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
     collector = SampleCollector(cfg.policy.collect.collector, collector_env, policy.collect_mode, tb_logger, exp_name=cfg.exp_name)
-    vis_evaluator = SingleCarlaEvaluator(cfg.policy.eval.evaluator, vis_eval_single_env, policy.eval_mode) #, tb_logger, exp_name=cfg.exp_name)
+
+    wandb_notes='task pretrain='+str(cfg.policy.model.task_pretrained) + '_fix-weight=' + str(cfg.policy.model.fix_perception)
+    vis_evaluator = SingleCarlaEvaluator(wandb_notes, cfg.policy.eval.evaluator, vis_eval_single_env, policy.eval_mode) #, tb_logger, exp_name=cfg.exp_name)
     # evaluator = CarlaBenchmarkEvaluator(cfg.policy.eval.evaluator, eval_single_env, policy.eval_mode)
 
     learner.call_hook('before_run')
@@ -215,4 +220,8 @@ def main(cfg, seed=0):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--vis-path', type=str, default='/home/yhxu/qihang/video')
+    args = parser.parse_args()
+    main_config.env.visualize.save_path = args.vis_path
     main(main_config)
