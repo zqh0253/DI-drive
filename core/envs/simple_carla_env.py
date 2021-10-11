@@ -418,10 +418,11 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         speed_reward = 1 - abs(speed - target_speed) / speed_limit
         if speed < 1:
             speed_reward -= 1
+        speed_reward = 0
 
         forward_vector = self._simulator_databuffer['state']['forward_vector']
         target_forward = self._simulator_databuffer['navigation']['target_forward']
-        angle_reward = 1 * (0.1 - angle(forward_vector, target_forward) / np.pi)
+        angle_reward = 3 * (0.1 - angle(forward_vector, target_forward) / np.pi)
 
         steer = self._simulator_databuffer['action'].get('steer', 0)
         command = self._simulator_databuffer['navigation']['command']
