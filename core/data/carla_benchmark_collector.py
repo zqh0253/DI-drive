@@ -178,8 +178,7 @@ class CarlaBenchmarkCollector(BaseCollector):
                     break
 
         if self._seed is not None:
-            for env_id in running_env_params:
-                self._env_manager.seed({env_id: self._seed})
+                self._env_manager.seed(self._seed)
         self._env_manager.reset(running_env_params)
 
         return_data = []

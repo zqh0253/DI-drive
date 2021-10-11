@@ -46,7 +46,9 @@ class SingleCarlaEvaluator(BaseEvaluator):
         super().__init__(cfg, env, policy, tb_logger=tb_logger, exp_name=exp_name, instance_name=instance_name)
         self._render = self._cfg.render
         self._transform_obs = self._cfg.transform_obs
-        wandb.init(project='carla', name=notes)
+        self.is_wandb = notes is not None
+        if self.is_wandb:
+            wandb.init(project='carla', name=notes)
 
     def close(self) -> None:
         """
@@ -102,7 +104,9 @@ class SingleCarlaEvaluator(BaseEvaluator):
             'eval_reward': eval_reward,
             'success': success,
         }
-        wandb.log(info)
+        
+        if self.is_wandb:
+            wandb.log(info)
         print(
             "[EVALUATOR] Evaluation ends:\n{}".format(
                 '\n'.join(['\t{}: {:.3f}'.format(k, v) for k, v in info.items()])

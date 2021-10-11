@@ -25,8 +25,8 @@ autorun_config = dict(
                     name='rgb',
                     type='rgb',
                     size=[800, 600],
-                    position=[-5.5, 0, 2.8],
-                    rotation=[-15, 0, 0],
+                    position=[2.0, 0, 1.4],
+                    rotation=[0, 0, 0],
                 ),
                 dict(
                     name='birdview',
@@ -37,16 +37,17 @@ autorun_config = dict(
             ),
         ),
         visualize=dict(
-            type='birdview',
+            type='rgb',
             outputs=['video'],
             show_text=True,
             save_dir='/home/qhzhang/code/drive-from-video'
         ),
         wrapper=dict(),
     ),
-    server=[dict(carla_host='localhost', carla_ports=[8000, 8002, 2])],
+    server=[dict(carla_host='localhost', carla_ports=[9000, 9002, 2])],
     policy=dict(
-        target_speed=40,
+        target_speed=25,
+        noise=True,
         eval=dict(
             evaluator=dict(
                 render=True,
@@ -70,7 +71,7 @@ def main(cfg, seed=0):
     carla_env.seed(seed)
     set_pkg_seed(seed)
     auto_policy = AutoPIDPolicy(cfg.policy)
-    evaluator = SingleCarlaEvaluator(cfg.policy.eval.evaluator, carla_env, auto_policy.eval_mode)
+    evaluator = SingleCarlaEvaluator(None, cfg.policy.eval.evaluator, carla_env, auto_policy.eval_mode)
     evaluator.eval(cfg.policy.eval.evaluator.reset_param)
     evaluator.close()
 

@@ -17,7 +17,7 @@ from core.utils.others.tcp_helper import parse_carla_tcp
 
 config = dict(
     env=dict(
-        env_num=8,
+        env_num=5,
         simulator=dict(
             disable_two_wheels=True,
             waypoint_num=32,
@@ -51,12 +51,13 @@ config = dict(
     ],
     policy=dict(
         target_speed=25,
-        noise=True,
+        noise=False,
         collect=dict(
             n_episode=5,
             dir_path='./datasets_train/cils_datasets_train',
             collector=dict(
                 suite='FullTown01-v1',
+                seed=0
             ),
         )
     ),
@@ -123,7 +124,7 @@ def main(cfg, seed=0):
         env_fn=[partial(wrapped_env, cfg.env, cfg.env.wrapper, *tcp_list[i]) for i in range(env_num)],
         cfg=cfg.env.manager,
     )
-    collector_env.seed(seed)
+    # collector_env.seed(seed)
 
     policy = AutoPIDPolicy(cfg.policy)
 
