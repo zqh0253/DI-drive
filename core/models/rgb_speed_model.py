@@ -25,34 +25,50 @@ class RGBSpeedConvEncoder(nn.Module):
             self,
             obs_shape: Tuple,
             embedding_size: int,
-            task_pretrianed: bool,
+            task_pretrained: bool,
+            img_pretrained: bool,
             fix_perception: bool
     ) -> None:
         super().__init__()
 
         self._obs_shape = obs_shape
         self._embedding_size = embedding_size
-        self._model = models.resnet34(pretrained=True)
-        d = torch.load('/home/yhxu/qhzhang/workspace/only_steering.pt')
-        # carla_pretrain = torch.load('/home/yhxu/qhzhang/workspace/iteration_10000.pth.tar')
+        self._model = models.resnet34(pretrained=img_pretrained)
+        # d = torch.load('/home/yhxu/qhzhang/workspace/only_steering.pt')
 
+        # newd = OrderedDict()
+        # for k,v in d.items():
+        #     if 'module._perc' in k:
+        #         newd[k[19:]] = v
+        # if task_pretrained:
+        #     self._model.load_state_dict(newd)
+            
+        d = torch.load('/home/yhxu/qhzhang/workspace/taco.pth.tar')
         newd = OrderedDict()
-        for k,v in d.items():
-            if 'module._perc' in k:
-                newd[k[19:]] = v
-        # newdd = OrderedDict()
-        # for k, v in carla_pretrain['model'].items():
-        #     if 'perception' in k and 'critic' not in k and 'actor' not in k:
-        #         newdd[k[26:]] = v
-        if task_pretrianed:
-            self._model.load_state_dict(newd)
+        for k,v in d['state_dict'].items():
+            if 'module.encoder_q' in k:
+                newd[k[17:]] = v
+        del newd['fc.0.weight']
+        del newd['fc.0.bias']
+        del newd['fc.2.weight']
+        del newd['fc.2.bias']
+        if task_pretrained:
+            self._model.load_state_dict(newd, strict=False)
+
+        self.fix_perception = fix_perception
         self.perception = torch.nn.Sequential(*(list(self._model.children())[:-1]))
         # self.perception.load_state_dict(newdd)
         if fix_perception:
+            self.perception.eval()
             for p in self.perception.parameters():
                 p.requires_grad=False
         flatten_size = 512
         self._mid = nn.Linear(flatten_size, self._embedding_size // 2)
+    
+    def train(self, mode=True):
+        super().train(mode)
+        if self.fix_perception:
+            self.perception.eval()
 
     def _get_flatten_size(self) -> int:
         test_data = torch.randn(1, *self._obs_shape)
@@ -73,6 +89,7 @@ class RGBSpeedConvEncoder(nn.Module):
         image = data['rgb'].permute(0, 3, 1, 2)
         speed = data['speed']
         x = self.perception(image).squeeze(-1).squeeze(-1)
+        # x = torch.nn.functional.normalize(x, dim=1)
         x = self._mid(x)
         speed_embedding_size = self._embedding_size - self._embedding_size // 2
         speed_vec = torch.unsqueeze(speed, 1).repeat(1, speed_embedding_size)

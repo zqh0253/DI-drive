@@ -416,15 +416,12 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         elif agent_state == 4 and not self._ignore_light:
             target_speed = 0
         speed_reward = 1 - abs(speed - target_speed) / speed_limit
-        speed_reward = 0
         if speed < 1:
-            speed_reward -= 1
-        if speed > 5:
             speed_reward -= 1
 
         forward_vector = self._simulator_databuffer['state']['forward_vector']
         target_forward = self._simulator_databuffer['navigation']['target_forward']
-        angle_reward = 3 * (0.1 - angle(forward_vector, target_forward) / np.pi)
+        angle_reward = 1 * (0.1 - angle(forward_vector, target_forward) / np.pi)
 
         steer = self._simulator_databuffer['action'].get('steer', 0)
         command = self._simulator_databuffer['navigation']['command']
@@ -475,7 +472,6 @@ class SimpleCarlaEnv(BaseCarlaEnv):
 
         total_reward = goal_reward + distance_reward + speed_reward + angle_reward + steer_reward + lane_reward \
             + failure_reward
-        # total_reward = goal_reward + distance_reward + angle_reward + failure_reward
         return total_reward, reward_info
 
     def render(self, mode='rgb_array') -> None:

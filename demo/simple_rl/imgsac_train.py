@@ -4,23 +4,23 @@ from functools import partial
 from easydict import EasyDict
 import copy
 import time
-import argparse
 from tensorboardX import SummaryWriter
 
 from core.envs import SimpleCarlaEnv, CarlaEnvWrapper
 from core.utils.others.tcp_helper import parse_carla_tcp
-from core.eval import SerialEvaluator,  SingleCarlaEvaluator, CarlaBenchmarkEvaluator
+from core.eval import SerialEvaluator, SingleCarlaEvaluator, CarlaBenchmarkEvaluator
 from ding.envs import SyncSubprocessEnvManager, BaseEnvManager
-from ding.policy import PPOPolicy
-from ding.worker import BaseLearner, SampleCollector
-from ding.utils import set_pkg_seed, DistContext
-from demo.simple_rl.model import PPORLModel, CPPORGBRLModel, PPORGBRLModel
+from ding.policy import SACPolicy
+from ding.worker import BaseLearner, SampleCollector, NaiveReplayBuffer
+from ding.utils import set_pkg_seed
+
 from demo.simple_rl.env_wrapper import DiscreteBenchmarkEnvWrapper, ContinuousBenchmarkEnvWrapper, ContinuousRgbBenchmarkEnvWrapper, ContinuousRgbCarlaEnvWrapper
 from core.utils.data_utils.bev_utils import unpack_birdview
 from core.utils.others.ding_utils import compile_config
+from demo.simple_rl.model import CSACRGBRLModel
 
 train_config = dict(
-    exp_name='ppo21_bev32_lr1e4_bs128_ns3000_update5_train_ft',
+    exp_name='sac2_bev32_buf2e5_lr1e4_bs128_ns3000_update4_train_ft',
     env=dict(
         collector_env_num=7,
         evaluator_env_num=1,
@@ -32,17 +32,17 @@ train_config = dict(
             planner=dict(
                 type='behavior',
                 resolution=0.1,
-                min_distance = 3,
+                min_distance = 3
             ),
             obs=(
                 dict(
                     name='rgb',
                     type='rgb',
                     size=[320, 180],
-                    position=[2.0, 0, 1.4],
-                    rotation=[0, 0, 0],
+                    position=[2.0,0,1.4],
+                    rotataion=[0,0,0]
                 ),
-            ),
+            )
         ),
         col_is_failure=True,
         stuck_is_failure=True,
@@ -50,29 +50,29 @@ train_config = dict(
         off_route_is_failure=True,
         ignore_light=True,
         finish_reward=300,
+        visualize=dict(
+            type='rgb',
+            outputs=['video'],
+            show_text=True,
+            save_dir='/home/qhzhang/video'
+        ),
         manager=dict(
             collect=dict(
                 auto_reset=True,
                 shared_memory=False,
                 context='spawn',
                 max_retry=3,
-		reset_timeout=1000,
-		step_timeout=1000,
+                reset_timeout=1000,
+                step_timeout=1000
             ),
             eval=dict(
                 shared_memory=False,
                 auto_reset=False,
                 context='spawn',
                 max_retry=3,
-		reset_timeout=1000,
-		step_timeout=1000,
+                reset_timeout=1000,
+                step_timeout=1000
                 )
-        ),
-        visualize = dict(
-            type='rgb',
-            outputs=['video'],
-            show_text=True,
-            save_dir='/home/yhxu/qhzhang/video'
         ),
         wrapper=dict(
             # Collect and eval suites for training
@@ -85,28 +85,21 @@ train_config = dict(
     ],
     policy=dict(
         cuda=True,
-        nstep_return=False,
-        on_policy=True,
         model=dict(
             action_shape=2,
+            twin_critic=True,
             task_pretrained=False,
             img_pretrained=True,
-            fix_perception=True,
+            fix_perception=False,
             normalization=None,
         ),
         learn=dict(
-            multi_gpu=False,
-            epoch_per_collect=6,
             batch_size=256,
-            # learning_rate=0.0003,
-            # weight_decay=0.0001,
-            learning_rate=0.0003,
-            weight_decay=0.0000, 
-            value_weight=0.5,
-            adv_norm=False,
-            entropy_weight=0.01,
-            clip_ratio=0.2,
-            target_update_freq=100,
+            learning_rate_q=1e-4,
+            learning_rate_policy=1e-4,
+            learning_rate_value=1e-4,
+            learning_rate_alpha=1e-4,
+            weight_decay=0.0001,
             learner=dict(
                 hook=dict(
                     load_ckpt_before_run='',
@@ -114,14 +107,13 @@ train_config = dict(
             ),
         ),
         collect=dict(
-            my_n_sample=1024,
+            n_sample=3000,
+            noise_sigma=0.1,
             collector=dict(
                 collect_print_freq=1000,
                 deepcopy_obs=True,
                 transform_obs=True,
             ),
-            discount_factor=0.9,
-            gae_lambda=0.95,
         ),
         eval=dict(
             evaluator=dict(
@@ -131,7 +123,22 @@ train_config = dict(
                 n_episode=3,
                 stop_rate=0.7,
                 transform_obs=True,
-                render=True,
+                render=True
+            ),
+        ),
+        other=dict(
+            replay_buffer=dict(
+                replay_buffer_size=400000,
+                replay_buffer_start_size=10000,
+                max_use=16,
+                monitor=dict(
+                    sampled_data_attr=dict(
+                        print_freq=10000,  # times
+                    ),
+                    periodic_thruput=dict(
+                        seconds=120000000,
+                    ),
+                ),
             ),
         ),
     ),
@@ -143,16 +150,17 @@ main_config = EasyDict(train_config)
 def wrapped_env(env_cfg, wrapper_cfg, host, port, tm_port=None):
     return ContinuousRgbBenchmarkEnvWrapper(SimpleCarlaEnv(env_cfg, host, port, tm_port), wrapper_cfg)
 
-def single_wrapped_env_for_benchmark(env_cfg, host, port, tm_port=None): 
+def single_wrapped_env_for_benchmark(env_cfg, host, port, tm_port=None):
     return ContinuousRgbCarlaEnvWrapper(SimpleCarlaEnv(env_cfg, host, port, tm_port))
 
 def main(cfg, seed=0):
     cfg = compile_config(
         cfg,
         SyncSubprocessEnvManager,
-        PPOPolicy,
+        SACPolicy,
         BaseLearner,
         SampleCollector,
+        buffer=NaiveReplayBuffer,
     )
     tcp_list = parse_carla_tcp(cfg.server)
     collector_env_num, evaluator_env_num = cfg.env.collector_env_num, cfg.env.evaluator_env_num
@@ -165,66 +173,63 @@ def main(cfg, seed=0):
         env_fn=[partial(wrapped_env, cfg.env, cfg.env.wrapper.collect, *tcp_list[i]) for i in range(collector_env_num)],
         cfg=cfg.env.manager.collect,
     )
-    # evaluate_env = BaseEnvManager(
-    #     env_fn=[partial(wrapped_env, cfg.env, cfg.env.wrapper.eval, *tcp_list[collector_env_num + i]) for i in range(evaluator_env_num)],
-    #     cfg=cfg.env.manager.eval,
-    # )
+     #evaluate_env = BaseEnvManager(
+     #    env_fn=[partial(wrapped_env, cfg.env, cfg.env.wrapper.eval, *tcp_list[collector_env_num + i]) for i in range(evaluator_env_num)],
+     #    cfg=cfg.env.manager.eval,
+     #)
+
     vis_eval_single_env = wrapped_env(cfg.env, cfg.env.wrapper.eval, *tcp_list[collector_env_num])
-    # eval_single_env = SyncSubprocessEnvManager(
-    #         env_fn=[partial(single_wrapped_env_for_benchmark, cfg.env,  *tcp_list[collector_env_num+1])],
-    #         cfg=cfg.env.manager.eval
-    #     )
-
-
+     
+    # Uncomment this to add save replay when evaluation
+    # evaluate_env.enable_save_replay(cfg.env.replay_path)
     collector_env.seed(seed)
-    # evaluate_env.seed(seed)
-    # eval_single_env.seed(seed)
     vis_eval_single_env.seed(seed)
+    # evaluate_env.seed(seed)
     set_pkg_seed(seed)
 
-    model = CPPORGBRLModel(**cfg.policy.model)
-    policy = PPOPolicy(cfg.policy, model=model)
+    model = CSACRGBRLModel(**cfg.policy.model)
+    policy = SACPolicy(cfg.policy, model=model)
 
     tb_logger = SummaryWriter('./log/{}/'.format(cfg.exp_name))
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
     collector = SampleCollector(cfg.policy.collect.collector, collector_env, policy.collect_mode, tb_logger, exp_name=cfg.exp_name)
+    # evaluator = SerialEvaluator(cfg.policy.eval.evaluator, evaluate_env, policy.eval_mode, tb_logger, exp_name=cfg.exp_name)
+    replay_buffer = NaiveReplayBuffer(cfg.policy.other.replay_buffer, tb_logger, exp_name=cfg.exp_name)
 
     wandb_notes='task pretrain='+str(cfg.policy.model.task_pretrained) + '_img_pretrained='+str(cfg.policy.model.img_pretrained)+ '_fix-weight=' + str(cfg.policy.model.fix_perception)
-    vis_evaluator = SingleCarlaEvaluator(wandb_notes, cfg.policy.eval.evaluator, vis_eval_single_env, policy.eval_mode) #, tb_logger, exp_name=cfg.exp_name)
-    # evaluator = CarlaBenchmarkEvaluator(cfg.policy.eval.evaluator, eval_single_env, policy.eval_mode)
+    vis_evaluator = SingleCarlaEvaluator(wandb_notes, cfg.policy.eval.evaluator, vis_eval_single_env, policy.eval_mode)
 
     learner.call_hook('before_run')
-    
-    cnt = 0
+
+    new_data = collector.collect(n_sample=10000, train_iter=learner.train_iter)
+    replay_buffer.push(new_data, cur_collector_envstep=collector.envstep)
+
     while True:
-        cnt +=1
+        print('eval')
+        vis_evaluator.eval()
         # if evaluator.should_eval(learner.train_iter):
         #     stop, rate = evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
         #     if stop:
         #         break
-        vis_evaluator.eval()
-        #if cnt % 10 == 0:
-        #    evaluator.eval()
         # Sampling data from environments
-        new_data = collector.collect(train_iter=learner.train_iter, n_sample=cfg.policy.collect.my_n_sample)
-        print('-collect finish!!!')
-        unpack_birdview(new_data)
-        print('unpack finish!!!')
-        learner.train(new_data, collector.envstep)
-        print('-train finish!!!!')
+        new_data = collector.collect(train_iter=learner.train_iter)
+        update_per_collect = len(new_data) // cfg.policy.learn.batch_size * 4
+        replay_buffer.push(new_data, cur_collector_envstep=collector.envstep)
+        # Training
+        for i in range(update_per_collect):
+            train_data = replay_buffer.sample(cfg.policy.learn.batch_size, learner.train_iter)
+            if train_data is not None:
+                train_data = copy.deepcopy(train_data)
+                unpack_birdview(train_data)
+                learner.train(train_data, collector.envstep)
+
     learner.call_hook('after_run')
 
-    collector_env.close()
-    eval_single_env.close()
-    vis_eval_single_env.close()
-
+    collector.close()
     evaluator.close()
     learner.close()
+    replay_buffer.close()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--vis-path', type=str, default='/home/yhxu/qihang/video')
-    args = parser.parse_args()
-    main_config.env.visualize.save_dir = args.vis_path
     main(main_config)
