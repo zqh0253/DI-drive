@@ -173,6 +173,7 @@ class BenchmarkEnvWrapper(CarlaEnvWrapper):
             self._reset_param_index + 1
             if self._reset_param_index >= len(self._reset_param_list):
                 self._reset_param_index = 0
+        print(self._mode, self._param)
         return super().reset(**self._param)
 
     def step(self, action: Dict) -> Any:

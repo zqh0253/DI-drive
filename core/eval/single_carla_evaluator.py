@@ -48,7 +48,7 @@ class SingleCarlaEvaluator(BaseEvaluator):
         self._transform_obs = self._cfg.transform_obs
         self.is_wandb = notes is not None
         if self.is_wandb:
-            wandb.init(project='carla', name=notes)
+            wandb.init(project=cfg.project, name=notes)
 
     def close(self) -> None:
         """
@@ -96,15 +96,17 @@ class SingleCarlaEvaluator(BaseEvaluator):
                 if timestep.done:
                     eval_reward = timestep.info['final_eval_reward']
                     success = timestep.info['success']
+                    rc = timestep.info['route_completion']
                     break
 
         duration = self._timer.value
         info = {
             'evaluate_time': duration,
             'eval_reward': eval_reward,
-            'success': success,
+            'success': float(bool(success)),
+            'route_completion': rc,
         }
-        
+        print(info)
         if self.is_wandb:
             wandb.log(info)
         print(

@@ -765,5 +765,5 @@ class CarlaSimulator(BaseSimulator):
         return self._end_timeout
 
     @property
-    def total_diatance(self) -> float:
+    def total_distance(self) -> float:
         return self._total_distance

@@ -76,8 +76,8 @@ train_config = dict(
         ),
         wrapper=dict(
             # Collect and eval suites for training
-            collect=dict(suite='NoCrashTown01-v1', ),
-            eval=dict(suite='NoCrashTown01-v1', ),
+            collect=dict(suite='FullTown01-v1', ),
+            eval=dict(suite='FullTown02-v2', ),
             # eval=dict(suite='NoCrashTown01-v1', ),
         ),
     ),
@@ -90,7 +90,7 @@ train_config = dict(
         on_policy=True,
         model=dict(
             action_shape=2,
-            task_pretrained=False,
+            task_pretrained=True,
             img_pretrained=True,
             fix_perception=False,
             normalization=None,
@@ -126,8 +126,8 @@ train_config = dict(
         ),
         eval=dict(
             evaluator=dict(
-                project='carla-nocrash-same-env',
-                suite='NoCrashTown01-v1',
+                project='carla-fulltown',
+                suite='FullTown02-v2',
                 # suite='NoCrashTown01-v1',
                 episodes_per_suite=50,
                 eval_freq=5000,
@@ -192,7 +192,7 @@ def main(cfg, seed=0):
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
     collector = SampleCollector(cfg.policy.collect.collector, collector_env, policy.collect_mode, tb_logger, exp_name=cfg.exp_name)
 
-    wandb_notes='task pretrain='+str(cfg.policy.model.task_pretrained) + '_img_pretrained='+str(cfg.policy.model.img_pretrained)+ '_fix-weight=' + str(cfg.policy.model.fix_perception) \
+    wandb_notes='FULLTOWN--task pretrain='+str(cfg.policy.model.task_pretrained) + '_img_pretrained='+str(cfg.policy.model.img_pretrained)+ '_fix-weight=' + str(cfg.policy.model.fix_perception) \
                 + '_lr=' + str(cfg.policy.learn.learning_rate) + '_wd=' + str(cfg.policy.learn.weight_decay) 
 
     vis_evaluator = SingleCarlaEvaluator(wandb_notes, cfg.policy.eval.evaluator, vis_eval_single_env, policy.eval_mode) #, tb_logger, exp_name=cfg.exp_name)
