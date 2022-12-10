@@ -229,6 +229,8 @@ class CarlaSimulator(BaseSimulator):
         self._apply_world_setting(**kwargs)
         self._set_town(self._town_name)
         self._set_weather(self._weather)
+        self._start = start
+        self._end = end
 
         self._blueprints = self._world.get_blueprint_library()
 
@@ -443,6 +445,12 @@ class CarlaSimulator(BaseSimulator):
         self._planner = planner_cls(self._planner_cfg)
         self._collision_sensor = CollisionSensor(self._hero_actor, self._col_threshold)
         self._traffic_light_helper = TrafficLightHelper(self._hero_actor)
+
+        # ZQH tmp, change traffic light to green
+        light_manager = self._world.get_lightmanager()
+        lights = light_manager.get_all_lights()
+        for light in lights:
+            light.set_color(carla.Color(0, 255, 0))
 
     def _ready(self, ticks: int = 30) -> bool:
         for _ in range(ticks):

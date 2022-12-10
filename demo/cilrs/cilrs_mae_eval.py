@@ -1,35 +1,22 @@
 from easydict import EasyDict
 import torch
 from functools import partial
-import smtplib
 
 from core.envs import SimpleCarlaEnv
-from core.policy import CILRSPolicy
+from core.policy import CILRSMAEPolicy
 from core.eval import CarlaBenchmarkEvaluator
 from core.utils.others.tcp_helper import parse_carla_tcp
 from ding.utils import set_pkg_seed, deep_merge_dicts
 from ding.envs import AsyncSubprocessEnvManager
 from demo.cilrs.cilrs_env_wrapper import CILRSEnvWrapper
 
-def sendmail(ss):
-    s = smtplib.SMTP()
-    s.connect('smtp.qq.com', 25)
-    s.login('1021662605', 'tuvlzaqpebxfbbie')
-    from email.mime.text import MIMEText
-
-    msg = MIMEText(ss, 'plain', 'utf-8')
-    msg['Subject'] = ss
-    msg['From'] = '1021662605@qq.com'
-    msg['To'] = 'qhzhang@link.cuhk.edu.hk'
-    s.sendmail('1021662605@qq.com', ['qhzhang@link.cuhk.edu.hk'], msg.as_string())
-
 cilrs_config = dict(
     env=dict(
-        env_num=16,
+        env_num=8,
         visualize=dict(type='rgb',
             outputs=['video'],
-            show_text=False,
-            save_dir='/home/yhxu/qhzhang/video/bolei'),
+            show_text=True,
+            save_dir='/home/yhxu/qhzhang/video/cilrs'),
         simulator=dict(
             town='Town02',
             disable_two_wheels=True,
@@ -44,6 +31,8 @@ cilrs_config = dict(
                     type='rgb',
                     size=[320, 180],
                     position=[2.0, 0.0, 1.4],
+                    #size=[400, 300],
+                    #position=[1.3, 0.0, 2.3],
                     rotation=[0,0,0],
                     fov=100,
                 ),
@@ -53,14 +42,16 @@ cilrs_config = dict(
                     size=[320, 320],
                     position=[0.0, 0.0, 28],
                     rotation=[-90,0,0],
-                ),
+                    ),
                 dict(
                     name='obs',
                     type='rgb',
                     size=[320*4, 180*4],
                     position=[-5.5, 0.0, 2.8],
                     rotation=[-15,0,0],
-                ),
+
+
+                    )
             ),
         ),
         wrapper=dict(),
@@ -74,10 +65,11 @@ cilrs_config = dict(
             max_retry=1,
         ),
     ),
-    server=[dict(carla_host='localhost', carla_ports=[9000, 9032, 2])],
+    server=[dict(carla_host='localhost', carla_ports=[9000, 9016, 2])],
     policy=dict(
         #ckpt_path='./checkpoints/cilrs_train/0.000101-best_ckpt.pth',
         ckpt_path='./checkpoints_taco/cilrs_train/0.0001099-00090_ckpt.pth',
+        parallel=False,
         model=dict(
             num_branch=4,
             backbone='resnet34',
@@ -86,9 +78,9 @@ cilrs_config = dict(
         ),
         eval=dict(
             evaluator=dict(
-                suite=['FullTown01-v1'],
-                # suite=['FullTown02-v2'],
+                suite=['FullTown02-v2'],
                 transform_obs=True,
+                resize_rgb=True,
                 render=True,
                 seed=1
             ),
@@ -117,7 +109,7 @@ def main(cfg, seed=0):
     )
     carla_env.seed(seed)
     set_pkg_seed(seed)
-    cilrs_policy = CILRSPolicy(cfg.policy).eval_mode
+    cilrs_policy = CILRSMAEPolicy(cfg.policy).eval_mode
     if cfg.policy.ckpt_path is not None:
         print('loading checkpoint')
         state_dict = torch.load(cfg.policy.ckpt_path)
@@ -130,30 +122,21 @@ def main(cfg, seed=0):
 
 
 if __name__ == '__main__':
-    # ckpt_names = ['0.0001022', '5.022e-05', '0.0001011', '5.011e-05']
-    # ckpt_names = ['0.000101', '0.000103', '0.000104', '0.0001015']
-    ckpt_names = ['5.022e-05', '5.011e-05', '5.05e-05', '5.02e-05', ]
-    # ckpt_names = ['5.05e-05', '5.02e-05', ]
-    # ckpt_names = ['0.0001022', '0.0001011', '0.000105', '0.000102', ]
-    # ckpt_names = ['0.0001022', ]
-    # ckpt_names = ['0.0001022', '0.0001011', '0.000105', '0.000102']
-    # ckpt_names = ['0.0001022', '0.0001011', '0.000105', '0.000102']
-    # ckpt_names = ['0.0001', '0.0005', '1e-05', '5e-05', ]
-    # ckpt_names = ['0.0001' ]
-    methods = ['checkpoints_taco']
-    try:
-        for method in methods:
-            for name in ckpt_names:
-                for i in range(3,10):
-                # for i in range(6,10):
-                    # main_config.policy.ckpt_path = f'./checkpoints_taco/cilrs_train/{name}-{i*10:05d}_ckpt.pth'
-                    main_config.policy.ckpt_path = f'./{method}/cilrs_train/{name}-{i*10:05d}_ckpt.pth'
-                    print(main_config.policy.ckpt_path)
-                    main_config.policy.eval.evaluator.seed = 0
-                    main(main_config)
-    except:
-        sendmail('fail 194')
-        import traceback;traceback.print_exc()
-    finally:
-        sendmail('success 194')
+    import argparse;
 
+    parser = argparse.ArgumentParser(description='Process some integers.') 
+    parser.add_argument('--lr', type=str, default='5e-05') 
+    args = parser.parse_args()        
+    ckpt_names = [ args.lr ]
+    # ckpt_names = [ '0.0001', ]
+    # ckpt_names = ['0.0005011', '0.000505', '0.000502', ]
+    for ckpt in ckpt_names:
+        for i in range(3,10):
+            main_config.policy.ckpt_path = f'./checkpoints_taco/cilrs_train/{ckpt}-{i*10:05d}_ckpt.pth'
+            print(main_config.policy.ckpt_path)
+            main_config.policy.eval.evaluator.seed = 0
+            main(main_config)
+    # main_config.policy.eval.evaluator.seed = 1
+    # main(main_config)
+    # main_config.policy.eval.evaluator.seed = 2
+    # main(main_config)

@@ -253,6 +253,11 @@ class CarlaBenchmarkCollector(BaseCollector):
                                 if k in ['timestamp']:
                                     info.pop(k)
                             print('[COLLECTOR] env_id {} not success'.format(env_id), info)
+
+                            env_param = running_env_params[env_id]
+                            episode_data = {'env_param': env_param, 'data': list(self._traj_cache[env_id])}
+                            return_data.append(episode_data)
+                            
                             suite_index = collected_episodes % self._suite_num
                             next_suite = self._collect_suite_list[suite_index]
                             reset_param_index = self._collect_suite_index_dict[next_suite]

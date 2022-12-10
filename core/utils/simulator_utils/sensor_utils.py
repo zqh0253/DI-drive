@@ -396,6 +396,8 @@ class TrafficLightHelper(object):
             self.active_light_dis = 200
 
         if self._last_light is not None:
+            # tmp
+            self._last_light.set_state(carla.TrafficLightState.Green)
             if self._last_light.state != carla.TrafficLightState.Red:
                 return
 

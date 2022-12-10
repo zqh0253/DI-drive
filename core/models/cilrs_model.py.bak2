@@ -18,11 +18,9 @@ class CILRSModel(nn.Module):
         embedding_dim=512,
         speed_latent_dim=128,
         hidden_size=256,
-        fix_backbone=False,
         input_speed=True,
         predict_speed=True,
         pretrain_path=None,
-        bn=False
     ):
         super().__init__()
         self._normalize = normalize
@@ -32,26 +30,22 @@ class CILRSModel(nn.Module):
             'resnet34': models.resnet34,
             'resnet50': models.resnet50,
         }[backbone]
-        print('===',pretrained)
         self._backbone = backbone_cls(pretrained=pretrained)
         self._backbone.fc = nn.Sequential()
 
         if pretrain_path is not None:
             d = torch.load(pretrain_path)
-            if 'ckpt' not in pretrain_path:
-                from collections import OrderedDict
-                newd = OrderedDict()
-                for k,v in d['state_dict'].items():
-                    if 'module.encoder_q' in k:
-                        newd[k[17:]] = v
-                del newd['fc.0.weight']
-                del newd['fc.0.bias']
-                del newd['fc.2.weight']
-                del newd['fc.2.bias']
-            else:
-                newd = d
+            from collections import OrderedDict
+            newd = OrderedDict()
+            for k,v in d['state_dict'].items():
+                if 'module.encoder_q' in k:
+                    newd[k[17:]] = v
+            del newd['fc.0.weight']
+            del newd['fc.0.bias']
+            del newd['fc.2.weight']
+            del newd['fc.2.bias']
             self._backbone.load_state_dict(newd, strict=False)
-            print('------------------load finish')
+            print('load finish')
 
         self._num_branch = num_branch
         self._input_speed = input_speed
@@ -62,13 +56,13 @@ class CILRSModel(nn.Module):
             self._speed_in = nn.Sequential(
                 nn.Linear(speed_dim, hidden_size),
                 nn.ReLU(True),
-                nn.Linear(hidden_size, speed_latent_dim),
+                nn.Linear(hidden_size, embedding_dim),
             )
 
         # Project feature to speed prediction
         if predict_speed:
             self._speed_out = nn.Sequential(
-                nn.Linear(embedding_dim+speed_latent_dim, hidden_size),
+                nn.Linear(embedding_dim, hidden_size),
                 nn.ReLU(True),
                 nn.Linear(hidden_size, hidden_size),
                 nn.ReLU(True),
@@ -80,7 +74,7 @@ class CILRSModel(nn.Module):
         for i in range(num_branch):
             fc_branch_list.append(
                 nn.Sequential(
-                    nn.Linear(embedding_dim+speed_latent_dim, hidden_size),
+                    nn.Linear(embedding_dim, hidden_size),
                     nn.ReLU(True),
                     nn.Linear(hidden_size, hidden_size),
                     nn.ReLU(True),
@@ -90,21 +84,6 @@ class CILRSModel(nn.Module):
             )
 
         self._branches = nn.ModuleList(fc_branch_list)
-
-        self.bn = bn
-        if self.bn:
-            self.bn_head = nn.BatchNorm1d(embedding_dim+speed_latent_dim, affine=True)
-        self.fix_backbone = fix_backbone
-        if self.fix_backbone:
-            print('fix backbone')
-            self._backbone.eval()
-            for p in self._backbone.parameters():
-                p.requires_grad = False
-
-    def train(self, mode=True):
-        super().train(mode)
-        if self.fix_backbone:
-            self._backbone.eval()
 
     def _normalize_imagenet(self, x):
         """
@@ -132,9 +111,7 @@ class CILRSModel(nn.Module):
         if len(command.shape) == 1:
             command = command.unsqueeze(1)
         if self._input_speed:
-            embedding = torch.cat([embedding, self._speed_in(speed)], dim=1)
-        if self.bn:
-            embedding = self.bn_head(embedding)
+            embedding += self._speed_in(speed)
 
         control_pred = 0.
         for i, branch in enumerate(self._branches):

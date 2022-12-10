@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from collections import deque
 from tqdm import tqdm
+from PIL import Image
 from itertools import product
 import torch
 from typing import Dict, Any, List, Callable, Optional
@@ -52,6 +53,7 @@ class CarlaBenchmarkEvaluator(BaseEvaluator):
         suite='FullTown01-v0',
         weathers=None,
         seed=0,
+        resize_rgb=False,
         save_files=True,
     )
 
@@ -66,6 +68,7 @@ class CarlaBenchmarkEvaluator(BaseEvaluator):
     ) -> None:
         super().__init__(cfg, env, policy, tb_logger=tb_logger, exp_name=exp_name, instance_name=instance_name)
         self._benchmark_dir = self._cfg.benchmark_dir
+        self._resize_rgb = self._cfg.resize_rgb
         self._result_dir = self._cfg.result_dir
         self._transform_obs = self._cfg.transform_obs
         self._episodes_per_suite = self._cfg.episodes_per_suite
@@ -270,6 +273,11 @@ class CarlaBenchmarkEvaluator(BaseEvaluator):
                                 obs.pop(key)
                         if not obs:
                             break
+                        if self._resize_rgb:
+                            for x in obs.keys():
+                                img_np = obs[x]['rgb']
+                                img_pil = Image.fromarray(img_np.astype(np.uint8)).resize((224, 224))
+                                obs[x]['rgb'] = np.array(img_pil)
                         if self._transform_obs:
                             obs = to_tensor(obs, dtype=torch.float32)
                         policy_output = self._policy.forward(obs, **policy_kwargs)
@@ -296,6 +304,8 @@ class CarlaBenchmarkEvaluator(BaseEvaluator):
                                     reset_param = episode_queue.pop()
                                     self._env_manager.reset({i: reset_param})
                                     running_env_params[i] = reset_param
+                                else:
+                                    running_env_params.pop(i)
                         if self._env_manager.done:
                             break
                 duration = self._timer.value

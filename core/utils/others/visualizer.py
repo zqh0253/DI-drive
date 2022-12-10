@@ -126,18 +126,18 @@ class Visualizer(object):
                 _write('Brake: {:.2f}'.format(data_dict['brake']), left_text_pos + 2, 0, fontsize=fontsize)
                 left_text_pos += 3
 
-            if 'done_info' in data_dict:
-                _write('done'+data_dict['done_info'], left_text_pos, 0, fontsize=fontsize)
-                left_text_pos += 1
+            # if 'done_info' in data_dict:
+            #     _write('done'+data_dict['done_info'], left_text_pos, 0, fontsize=fontsize)
+            #     left_text_pos += 1
 
             right_text_pos = 1
             if 'collided' in data_dict:
                 _write('Collided: %s' % data_dict['collided'], right_text_pos, 9, fontsize=fontsize)
                 right_text_pos += 1
-            if 'total_lights' in data_dict and 'total_lights_ran' in data_dict:
-                text = 'Lights Ran: %d/%d' % (data_dict['total_lights_ran'], data_dict['total_lights'])
-                _write(text, right_text_pos, 9, fontsize=fontsize)
-                right_text_pos += 1
+            # if 'total_lights' in data_dict and 'total_lights_ran' in data_dict:
+            #     text = 'Lights Ran: %d/%d' % (data_dict['total_lights_ran'], data_dict['total_lights'])
+            #     _write(text, right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos += 1
             if 'end_distance' in data_dict:
                 text = 'Distance: %.1f' % data_dict['end_distance']
                 if 'total_distance' in data_dict:
@@ -150,21 +150,21 @@ class Visualizer(object):
                     text += '/%d' % data_dict['end_timeout']
                 _write(text, right_text_pos, 9, fontsize=fontsize)
                 right_text_pos += 1
-            if 'reward' in data_dict:
-                _write('Reward: %.1f' % data_dict['reward'], right_text_pos, 9, fontsize=fontsize)
-                right_text_pos += 1
-            if data_dict.get('stuck', False):
-                _write('Stuck!', right_text_pos, 9, fontsize=fontsize)
-                right_text_pos += 1
-            if data_dict.get('ran_light', False):
-                _write('Ran light!', right_text_pos, 9, fontsize=fontsize)
-                right_text_pos += 1
-            if data_dict.get('off_road', False):
-                _write('Off road!', right_text_pos, 9, fontsize=fontsize)
-                right_text_pos += 1
-            if data_dict.get('wrong_direction', False):
-                _write('Wrong direction!', right_text_pos, 9, fontsize=fontsize)
-                right_text_pos += 1
+            # if 'reward' in data_dict:
+            #     _write('Reward: %.1f' % data_dict['reward'], right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos += 1
+            # if data_dict.get('stuck', False):
+            #     _write('Stuck!', right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos += 1
+            # if data_dict.get('ran_light', False):
+            #     _write('Ran light!', right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos += 1
+            # if data_dict.get('off_road', False):
+            #     _write('Off road!', right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos += 1
+            # if data_dict.get('wrong_direction', False):
+            #     _write('Wrong direction!', right_text_pos, 9, fontsize=fontsize)
+            #     right_text_pos += 1
             
             # if data_dict.get('cur_yaw', False):
             #     _write('/%.1f' % data_dict['cur_yaw'], right_text_pos, 9, fontsize=fontsize)
@@ -173,14 +173,14 @@ class Visualizer(object):
             #     _write('/%.1f' % data_dict['node_yaw'], right_text_pos, 9, fontsize=fontsize)
             #     right_text_pos+=1
             
-            _write('goal: %.2f, distance: %.2f' % (data_dict['goal_reward'], data_dict['distance_reward']), right_text_pos, 9, fontsize=fontsize)
-            right_text_pos += 1
-            _write('speed: %.2f, angle: %.2f' % (data_dict['speed_reward'], data_dict['angle_reward']), right_text_pos, 9, fontsize=fontsize)
-            right_text_pos += 1
-            _write('steer: %.2f, lane: %.2f' % (data_dict['steer_reward'], data_dict['lane_reward']), right_text_pos, 9, fontsize=fontsize)
-            right_text_pos += 1
-            _write('failure: %.2f' % (data_dict['failure_reward']), right_text_pos, 9, fontsize=fontsize)
-            right_text_pos += 1
+            # _write('goal: %.2f, distance: %.2f' % (data_dict['goal_reward'], data_dict['distance_reward']), right_text_pos, 9, fontsize=fontsize)
+            # right_text_pos += 1
+            # _write('speed: %.2f, angle: %.2f' % (data_dict['speed_reward'], data_dict['angle_reward']), right_text_pos, 9, fontsize=fontsize)
+            # right_text_pos += 1
+            # _write('steer: %.2f, lane: %.2f' % (data_dict['steer_reward'], data_dict['lane_reward']), right_text_pos, 9, fontsize=fontsize)
+            # right_text_pos += 1
+            # _write('failure: %.2f' % (data_dict['failure_reward']), right_text_pos, 9, fontsize=fontsize)
+            # right_text_pos += 1
 
     def run_visualize(self) -> None:
         """

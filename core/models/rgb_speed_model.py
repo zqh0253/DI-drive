@@ -43,7 +43,7 @@ class RGBSpeedConvEncoder(nn.Module):
         # if task_pretrained:
         #     self._model.load_state_dict(newd)
             
-        d = torch.load('/home/yhxu/qhzhang/workspace/taco.pth.tar')
+        d = torch.load('/home/yhxu/qhzhang/workspace/taco_v6.pth.tar')
         newd = OrderedDict()
         for k,v in d['state_dict'].items():
             if 'module.encoder_q' in k:

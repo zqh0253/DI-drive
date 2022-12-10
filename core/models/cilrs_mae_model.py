@@ -5,8 +5,18 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
+from . import models_mae
 
-class CILRSModel(nn.Module):
+def prepare_mae_model(pretrained, ckpt_dir, arch='mae_vit_large_patch16'):
+    model = getattr(models_mae, arch)()
+    if pretrained:
+        checkpoint = torch.load(ckpt_dir, map_location='cpu')
+        msg = model.load_state_dict(checkpoint['model'], strict=False)
+        print(msg)
+    return model
+
+
+class CILRSMAEModel(nn.Module):
 
     def __init__(
         self,
@@ -15,7 +25,7 @@ class CILRSModel(nn.Module):
         normalize=True,
         num_branch=6,
         speed_dim=1,
-        embedding_dim=512,
+        embedding_dim=768,
         speed_latent_dim=128,
         hidden_size=256,
         fix_backbone=False,
@@ -26,32 +36,7 @@ class CILRSModel(nn.Module):
     ):
         super().__init__()
         self._normalize = normalize
-        assert backbone in ['resnet18', 'resnet34', 'resnet50'], backbone
-        backbone_cls = {
-            'resnet18': models.resnet18,
-            'resnet34': models.resnet34,
-            'resnet50': models.resnet50,
-        }[backbone]
-        print('===',pretrained)
-        self._backbone = backbone_cls(pretrained=pretrained)
-        self._backbone.fc = nn.Sequential()
-
-        if pretrain_path is not None:
-            d = torch.load(pretrain_path)
-            if 'ckpt' not in pretrain_path:
-                from collections import OrderedDict
-                newd = OrderedDict()
-                for k,v in d['state_dict'].items():
-                    if 'module.encoder_q' in k:
-                        newd[k[17:]] = v
-                del newd['fc.0.weight']
-                del newd['fc.0.bias']
-                del newd['fc.2.weight']
-                del newd['fc.2.bias']
-            else:
-                newd = d
-            self._backbone.load_state_dict(newd, strict=False)
-            print('------------------load finish')
+        self._backbone = prepare_mae_model(pretrained, pretrain_path, 'mae_vit_base_patch16')
 
         self._num_branch = num_branch
         self._input_speed = input_speed
@@ -119,14 +104,19 @@ class CILRSModel(nn.Module):
         return x
 
     def encode(self, input_images):
+        assert NotImplementedError
+        return embedding
+
+    def forward(self, input_images, speed, command):
         embedding = 0
         for x in input_images:
             if self._normalize:
                 x = self._normalize_imagenet(x)
-            embedding += self._backbone(x)
-        return embedding
+            emb, _, _= self._backbone.forward_encoder(x, mask_ratio=0)
+            emb = emb[:, 0, ...]
+            #emb = emb.sum(1)
+            embedding += emb
 
-    def forward(self, embedding, speed, command):
         if len(speed.shape) == 1:
             speed = speed.unsqueeze(1)
         if len(command.shape) == 1:

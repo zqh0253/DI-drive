@@ -9,23 +9,25 @@ import wandb
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from torch.optim import Adam
-from sty import bg
-from core.policy import CILRSPolicy
+
+from core.policy import CILRSMAEPolicy
 from core.data import CILRSDataset
 
 config = dict(
     exp_name='cilrs_train',
     policy=dict(
         cuda=True,
+        parallel=True,
         cudnn=True,
         resume=False,
         ckpt_path=None,
         model=dict(
+            pretrained=True,
             num_branch=4,
             backbone='resnet34',
-            fix_backbone=True,
-            pretrained=True,
-            # pretrain_path='/home/yhxu/qhzhang/workspace/taco.pth.tar'
+            # pretrain_path='/home/yhxu/qhzhang/workspace/taco.pth.tar',
+            # pretrain_path='/home/yhxu/qhzhang/workspace/checkpoint_0100.pth.tar',
+            bn=True,
         ),
         learn=dict(
             epoches=100,
@@ -45,11 +47,13 @@ config = dict(
             preloads='./_preloads/cilrs_datasets_train.npy',
             transform=True,
             shrink_ratio=10,
+            mae_resize=True
         ),
         val=dict(
             root_dir='./datasets_train/cilrs_datasets_val',
             preloads='./_preloads/cilrs_datasets_val.npy',
             transform=True,
+            mae_resize=True
         ),
     )
 )
@@ -87,13 +91,13 @@ def validate(policy, loader, epoch=0):
         for k in list(log_vars.keys()):
             loss_epoch[k] += [log_vars[k]]
     loss_epoch = {k: np.mean([i if type(i) is float else i.detach().cpu() for i in v]) for k, v in loss_epoch.items()}
-    wandb.log({'eval/'+k:v for k,v in log_vars.items()})
+    wandb.log({'eval/'+k:v for k,v in loss_epoch.items()})
     return loss_epoch
 
 
 def save_ckpt(state, name=None, exp_name=''):
-    os.makedirs('checkpoints/' + exp_name, exist_ok=True)
-    ckpt_path = 'checkpoints/{}/{}_ckpt.pth'.format(exp_name, name)
+    os.makedirs('checkpoints_taco/' + exp_name, exist_ok=True)
+    ckpt_path = 'checkpoints_taco/{}/{}_ckpt.pth'.format(exp_name, name)
     torch.save(state, ckpt_path)
 
 
@@ -121,7 +125,8 @@ def load_best_ckpt(policy, optimizer=None, root_dir='checkpoints', exp_name='', 
 
 
 def main(cfg):
-    wandb.init(project='cilrs')
+    name = f'lr:{cfg.policy.learn.lr}, shrink:{cfg.data.train.shrink_ratio}'
+    wandb.init(project='cilrs', config=cfg, name=name)
     if cfg.policy.cudnn:
         torch.backends.cudnn.benchmark = True
 
@@ -130,7 +135,8 @@ def main(cfg):
     train_loader = DataLoader(train_dataset, cfg.policy.learn.batch_size, shuffle=True, num_workers=8)
     val_loader = DataLoader(val_dataset, cfg.policy.learn.batch_size, num_workers=8)
 
-    cilrs_policy = CILRSPolicy(cfg.policy)
+    cilrs_policy = CILRSMAEPolicy(cfg.policy)
+    
     optimizer = Adam(cilrs_policy._model.parameters(), cfg.policy.learn.lr)
     # tb_logger = SummaryWriter('./log/{}/'.format(cfg.exp_name))
     iterations = 0
@@ -150,37 +156,41 @@ def main(cfg):
             f" Speed: {loss['speed_loss']:2.5f} Str: {loss['steer_loss']:2.5f}" +
             f" Thr: {loss['throttle_loss']:2.5f} Brk: {loss['brake_loss']:2.5f}"
         )
-
         if epoch % cfg.policy.eval.eval_freq == 0:
-            # cilrs_policy._model.eval()
-            # loss_dict = validate(cilrs_policy.learn_mode, val_loader, iterations)
-            # 
-            # total_loss = loss_dict['total_loss']
-            # tqdm.write(f"Validate Total: {total_loss:2.5f}")
+            cilrs_policy._model.eval()
+            loss_dict = validate(cilrs_policy.learn_mode, val_loader, iterations)
+            total_loss = loss_dict['total_loss']
+            steer_loss = loss_dict['steer_loss']
+            tqdm.write(f"Validate Total: {total_loss:2.5f}")
             state_dict = cilrs_policy.learn_mode.state_dict()
-            # state_dict['optimizer'] = optimizer.state_dict()
-            # state_dict['epoch'] = epoch
-            # state_dict['iterations'] = iterations
-            # state_dict['best_loss'] = best_loss
-            # if total_loss < best_loss and epoch > 0:
-            #     tqdm.write("Best Validation Loss!")
-            #     best_loss = total_loss
-            #     state_dict['best_loss'] = best_loss
-            #     save_ckpt(state_dict, str(cfg.policy.learn.lr)+'-best', cfg.exp_name)
+            state_dict['optimizer'] = optimizer.state_dict()
+            state_dict['epoch'] = epoch
+            state_dict['iterations'] = iterations
+            state_dict['best_loss'] = best_loss
+            if total_loss < best_loss and epoch > 0:
+                tqdm.write("Best Validation Loss!")
+                best_loss = total_loss
+                state_dict['best_loss'] = best_loss
+                save_ckpt(state_dict, str(cfg.policy.learn.lr)+'-best', cfg.exp_name)
             save_ckpt(state_dict, str(cfg.policy.learn.lr)+'-{:05d}'.format(epoch), cfg.exp_name)
 
 
 if __name__ == '__main__':
+    torch.manual_seed(0)
+    import random
+    random.seed(0)
+    import numpy as np
+    np.random.seed(0)
+
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--shrink', type=int, default=10)
-    parser.add_argument('--fix', action='store_true')
-    parser.add_argument('--pretrained', action='store_true')
+    parser.add_argument('--ckpt', type=str, default=None)
     args = parser.parse_args()
 
+    if args.ckpt is not None:
+        main_config.policy.model.pretrain_path = args.ckpt
     main_config.policy.learn.lr=args.lr
-    main_config.policy.model.fix_backbone = args.fix
-    main_config.policy.model.pretrained = args.pretrained
     main_config.data.train.shrink_ratio = args.shrink
     main(main_config)

@@ -4,9 +4,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import models
+from .beta_vae import BetaVAE
 
-
-class CILRSModel(nn.Module):
+class CILRSVAEModel(nn.Module):
 
     def __init__(
         self,
@@ -18,7 +18,6 @@ class CILRSModel(nn.Module):
         embedding_dim=512,
         speed_latent_dim=128,
         hidden_size=256,
-        fix_backbone=False,
         input_speed=True,
         predict_speed=True,
         pretrain_path=None,
@@ -26,32 +25,19 @@ class CILRSModel(nn.Module):
     ):
         super().__init__()
         self._normalize = normalize
-        assert backbone in ['resnet18', 'resnet34', 'resnet50'], backbone
-        backbone_cls = {
-            'resnet18': models.resnet18,
-            'resnet34': models.resnet34,
-            'resnet50': models.resnet50,
-        }[backbone]
-        print('===',pretrained)
-        self._backbone = backbone_cls(pretrained=pretrained)
-        self._backbone.fc = nn.Sequential()
+        self._backbone = BetaVAE(in_channels=3, latent_dim=512, )
 
         if pretrain_path is not None:
-            d = torch.load(pretrain_path)
-            if 'ckpt' not in pretrain_path:
-                from collections import OrderedDict
-                newd = OrderedDict()
-                for k,v in d['state_dict'].items():
-                    if 'module.encoder_q' in k:
-                        newd[k[17:]] = v
-                del newd['fc.0.weight']
-                del newd['fc.0.bias']
-                del newd['fc.2.weight']
-                del newd['fc.2.bias']
-            else:
-                newd = d
-            self._backbone.load_state_dict(newd, strict=False)
-            print('------------------load finish')
+            state_dict = torch.load(pretrain_path)
+            from collections import OrderedDict
+
+            dct = OrderedDict()
+
+            for k,v in state_dict['state_dict'].items():
+                dct[k[6:]] = v
+            self._backbone.load_state_dict(dct)
+
+            print(f'SUC: load ckpt from {pretrain_path}')
 
         self._num_branch = num_branch
         self._input_speed = input_speed
@@ -94,17 +80,6 @@ class CILRSModel(nn.Module):
         self.bn = bn
         if self.bn:
             self.bn_head = nn.BatchNorm1d(embedding_dim+speed_latent_dim, affine=True)
-        self.fix_backbone = fix_backbone
-        if self.fix_backbone:
-            print('fix backbone')
-            self._backbone.eval()
-            for p in self._backbone.parameters():
-                p.requires_grad = False
-
-    def train(self, mode=True):
-        super().train(mode)
-        if self.fix_backbone:
-            self._backbone.eval()
 
     def _normalize_imagenet(self, x):
         """
@@ -123,7 +98,7 @@ class CILRSModel(nn.Module):
         for x in input_images:
             if self._normalize:
                 x = self._normalize_imagenet(x)
-            embedding += self._backbone(x)
+            embedding += self._backbone.encode(x)[0]
         return embedding
 
     def forward(self, embedding, speed, command):

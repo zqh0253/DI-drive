@@ -62,11 +62,11 @@ config = dict(
         noise=True,
         noise_kwargs=dict(noise_len=5, drive_len=100, noise_type='uniform',noise_args=dict(low=-0.3, high=0.3)),
         collect=dict(
-            n_episode=100,
-            dir_path='./datasets_train/cilrs_datasets_train',
-            preloads_name='cilrs_datasets_train.npy',
+            n_episode=25,
+            dir_path='./datasets_train/cilrs_datasets_val',
+            preloads_name='cilrs_datasets_val.npy',
             collector=dict(
-                suite='FullTown01-v1',
+                suite='FullTown02-v2',
                 nocrash=True,
             ),
         )

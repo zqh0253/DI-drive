@@ -164,7 +164,8 @@ class SimpleCarlaEnv(BaseCarlaEnv):
             if 'name' in kwargs:
                 vis_name = kwargs['name']
             else:
-                vis_name = "{}_{}".format(
+                vis_name = "{}-{}-{}-{}_{}".format(
+                    self._simulator._start, self._simulator._end, self._simulator._weather,
                     self._simulator.town_name, time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
                 )
 
@@ -364,7 +365,17 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         if self._visualizer is not None:
             if self._visualize_cfg.type not in sensor_data:
                 raise ValueError("visualize type {} not in sensor data!".format(self._visualize_cfg.type))
-            self._render_buffer = sensor_data[self._visualize_cfg.type].copy()
+            bev = sensor_data['bev'].copy()
+            ob = sensor_data['obs'].copy()
+            rgb = sensor_data['rgb'].copy()
+
+            r1 = np.concatenate([rgb, bev], 0)    # 180+320, 320
+            r2 = np.zeros([720, 320, 3])
+            r2[:500,:,:] = r1
+            rr = np.concatenate([r2, ob], 1)
+
+            self._render_buffer = rr.copy()
+            # self._render_buffer = sensor_data[self._visualize_cfg.type].copy()
             if self._visualize_cfg.type == 'birdview':
                 self._render_buffer = visualize_birdview(self._render_buffer)
         return obs

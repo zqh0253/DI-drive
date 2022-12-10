@@ -26,10 +26,11 @@ class CILRSEnvWrapper(CarlaEnvWrapper):
         (width, height) = (int(im.width // self._cfg.scale), int(im.height // self._cfg.scale))
         im_resized = im.resize((width, height))
         image = np.asarray(im_resized)
-        start_x = height // 2 - self._cfg.crop // 2
-        start_y = width // 2 - self._cfg.crop // 2
-        cropped_image = image[start_x:start_x + self._cfg.crop, start_y:start_y + self._cfg.crop]
-        new_obs['rgb'] = cropped_image
+        # start_x = height // 2 - self._cfg.crop // 2
+        # start_y = width // 2 - self._cfg.crop // 2
+        # cropped_image = image[start_x:start_x + self._cfg.crop, start_y:start_y + self._cfg.crop]
+        # new_obs['rgb'] = cropped_image
+        new_obs['rgb'] = image
         return new_obs
 
     def reset(self, *args, **kwargs) -> Any:
