@@ -237,6 +237,9 @@ class SimpleCarlaEnv(BaseCarlaEnv):
                 'off_route': self._off_route,
                 'timeout': self._tick > self._timeout,
                 'success': self.is_success(),
+
+                "route_completion": 1 - self._simulator.end_distance / self._simulator.total_distance,
+                "distance_total": self._simulator.total_distance
             }
         )
 
@@ -430,15 +433,12 @@ class SimpleCarlaEnv(BaseCarlaEnv):
         elif agent_state == 4 and not self._ignore_light:
             target_speed = 0
         speed_reward = 1 - abs(speed - target_speed) / speed_limit
-        speed_reward = 0
         if speed < 1:
-            speed_reward -= 1
-        if speed > 5:
             speed_reward -= 1
 
         forward_vector = self._simulator_databuffer['state']['forward_vector']
         target_forward = self._simulator_databuffer['navigation']['target_forward']
-        angle_reward = 3 * (0.1 - angle(forward_vector, target_forward) / np.pi)
+        angle_reward = 1 * (0.1 - angle(forward_vector, target_forward) / np.pi)
 
         steer = self._simulator_databuffer['action'].get('steer', 0)
         command = self._simulator_databuffer['navigation']['command']
@@ -489,7 +489,6 @@ class SimpleCarlaEnv(BaseCarlaEnv):
 
         total_reward = goal_reward + distance_reward + speed_reward + angle_reward + steer_reward + lane_reward \
             + failure_reward
-        # total_reward = goal_reward + distance_reward + angle_reward + failure_reward
         return total_reward, reward_info
 
     def render(self, mode='rgb_array') -> None:
@@ -516,7 +515,7 @@ class SimpleCarlaEnv(BaseCarlaEnv):
             'tick': self._tick,
             'end_timeout': self._simulator.end_timeout,
             'end_distance': self._simulator.end_distance,
-            'total_distance': self._simulator.total_diatance,
+            'total_distance': self._simulator.total_distance,
             'done_info': self._done_info
         }
         render_info.update(self._simulator_databuffer['state'])

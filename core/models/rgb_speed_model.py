@@ -43,7 +43,7 @@ class RGBSpeedConvEncoder(nn.Module):
         # if task_pretrained:
         #     self._model.load_state_dict(newd)
             
-        d = torch.load('/home/yhxu/qhzhang/workspace/taco_v6.pth.tar')
+        d = torch.load('/home/qhzhang/data/ckpt/taco_v5.pth.tar')
         newd = OrderedDict()
         for k,v in d['state_dict'].items():
             if 'module.encoder_q' in k:
@@ -64,7 +64,8 @@ class RGBSpeedConvEncoder(nn.Module):
                 p.requires_grad=False
         flatten_size = 512
         self._mid = nn.Linear(flatten_size, self._embedding_size // 2)
-    
+        self.ln = nn.LayerNorm(flatten_size)
+
     def train(self, mode=True):
         super().train(mode)
         if self.fix_perception:
@@ -90,6 +91,7 @@ class RGBSpeedConvEncoder(nn.Module):
         speed = data['speed']
         x = self.perception(image).squeeze(-1).squeeze(-1)
         # x = torch.nn.functional.normalize(x, dim=1)
+        x = self.ln(x)
         x = self._mid(x)
         speed_embedding_size = self._embedding_size - self._embedding_size // 2
         speed_vec = torch.unsqueeze(speed, 1).repeat(1, speed_embedding_size)

@@ -37,7 +37,8 @@ casezoo_config = dict(
         #no_rendering=True,
         visualize=dict(
             type='rgb',
-            outputs=['show']
+            outputs=['video'],
+            save_dir='./'
         ),
     ),
     policy=dict(target_speed=40, ),
